@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Plus, RefreshCw, Search, UserPlus } from "lucide-react";
+import { Pencil, Plus, RefreshCw, Search, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,7 +23,10 @@ import {
 } from "@/components/ui/table";
 import { ErrorAlert } from "@/components/shared/error-alert";
 import { EmptyState } from "@/components/shared/empty-state";
+import { PlatformClinicSelector } from "@/components/admin/platform-clinic-selector";
 import { useAuth } from "@/contexts/auth-provider";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useOperationalScope } from "@/hooks/use-operational-scope";
 import { getErrorMessage } from "@/lib/errors";
 import { canAccessFeature } from "@/lib/permissions";
 import { patientService } from "@/services/patientService";
@@ -31,6 +34,7 @@ import type { Patient } from "@/types";
 
 export function PatientManagement() {
   const { user } = useAuth();
+  const { scope, scopeKey, isScopeReady } = useOperationalScope();
   const canUseQueue = canAccessFeature(user?.role, "queue");
   const canBookAppointments = canAccessFeature(user?.role, "appointmentsBook");
   const [patients, setPatients] = useState<Patient[]>([]);
@@ -40,40 +44,69 @@ export function PatientManagement() {
   const [error, setError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 400);
 
   const loadPatients = useCallback(async () => {
+    if (!isScopeReady) {
+      setLoading(false);
+      return;
+    }
     setError(null);
     setLoading(true);
     try {
-      const { data } = await patientService.list();
+      const q = debouncedSearch.trim();
+      const { data } = await patientService.list({
+        ...scope,
+        search: q || undefined,
+      });
       setPatients(data);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to load patients"));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scope, scopeKey, debouncedSearch, isScopeReady]);
 
   useEffect(() => {
     void loadPatients();
-  }, [loadPatients]);
+  }, [loadPatients, isScopeReady]);
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return patients;
-    return patients.filter(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.phone.replace(/\s/g, "").includes(q.replace(/\s/g, "")),
-    );
-  }, [patients, search]);
+  const startEdit = (patient: Patient) => {
+    setEditingId(patient._id);
+    setEditName(patient.name);
+    setEditPhone(patient.phone);
+  };
+
+  const handleUpdate = async (patientId: string) => {
+    setSaving(true);
+    setError(null);
+    try {
+      await patientService.update(
+        patientId,
+        { name: editName.trim(), phone: editPhone.trim() },
+        scope,
+      );
+      setEditingId(null);
+      await loadPatients();
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to update patient"));
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
     setError(null);
     try {
-      await patientService.create({ name: name.trim(), phone: phone.trim() });
+      await patientService.create(
+        { name: name.trim(), phone: phone.trim() },
+        scope,
+      );
       setName("");
       setPhone("");
       await loadPatients();
@@ -86,6 +119,8 @@ export function PatientManagement() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
+      <PlatformClinicSelector />
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
           Register walk-in patients for your clinic
@@ -142,7 +177,7 @@ export function PatientManagement() {
           <CardHeader>
             <CardTitle className="text-base">Patient directory</CardTitle>
             <CardDescription>
-              {filtered.length} patient{filtered.length === 1 ? "" : "s"}
+              {patients.length} patient{patients.length === 1 ? "" : "s"}
             </CardDescription>
             <div className="relative pt-2">
               <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
@@ -157,7 +192,7 @@ export function PatientManagement() {
           <CardContent>
             {loading ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
-            ) : filtered.length === 0 ? (
+            ) : patients.length === 0 ? (
               <EmptyState
                 icon={Plus}
                 title="No patients yet"
@@ -169,13 +204,71 @@ export function PatientManagement() {
                   <TableRow>
                     <TableHead>Name</TableHead>
                     <TableHead>Phone</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((p) => (
+                  {patients.map((p) => (
                     <TableRow key={p._id}>
-                      <TableCell className="font-medium">{p.name}</TableCell>
-                      <TableCell>{p.phone}</TableCell>
+                      {editingId === p._id ? (
+                        <>
+                          <TableCell>
+                            <Input
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              className="h-8"
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <Input
+                              value={editPhone}
+                              onChange={(e) => setEditPhone(e.target.value)}
+                              className="h-8"
+                            />
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                size="sm"
+                                disabled={saving}
+                                onClick={() => void handleUpdate(p._id)}
+                              >
+                                Save
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setEditingId(null)}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </>
+                      ) : (
+                        <>
+                          <TableCell className="font-medium">
+                            <Link
+                              href={`/dashboard/patients/${p._id}`}
+                              className="text-primary hover:underline"
+                            >
+                              {p.name}
+                            </Link>
+                          </TableCell>
+                          <TableCell>{p.phone}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              onClick={() => startEdit(p)}
+                            >
+                              <Pencil className="mr-1 size-3" />
+                              Edit
+                            </Button>
+                          </TableCell>
+                        </>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>

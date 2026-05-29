@@ -42,6 +42,12 @@ export function ClinicAdministration({
   const [selectedId, setSelectedId] = useState(userClinicId);
   const [name, setName] = useState("");
   const [location, setLocation] = useState("");
+  const [workingHoursStart, setWorkingHoursStart] = useState("09:00");
+  const [workingHoursEnd, setWorkingHoursEnd] = useState("17:00");
+  const [maxAppointmentsPerSlot, setMaxAppointmentsPerSlot] = useState(5);
+  const [editClinicId, setEditClinicId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editLocation, setEditLocation] = useState("");
   const [newName, setNewName] = useState("");
   const [newLocation, setNewLocation] = useState("");
   const [loading, setLoading] = useState(true);
@@ -64,6 +70,9 @@ export function ClinicAdministration({
         setMyClinic(data);
         setName(data.name);
         setLocation(data.location);
+        setWorkingHoursStart(data.workingHoursStart ?? "09:00");
+        setWorkingHoursEnd(data.workingHoursEnd ?? "17:00");
+        setMaxAppointmentsPerSlot(data.maxAppointmentsPerSlot ?? 5);
         setSelectedId(data._id);
         onClinicChange?.(data._id);
       }
@@ -81,6 +90,12 @@ export function ClinicAdministration({
   const handleSelectClinic = (id: string) => {
     setSelectedId(id);
     onClinicChange?.(id);
+    const clinic = clinics.find((c) => c._id === id);
+    if (clinic) {
+      setEditClinicId(clinic._id);
+      setEditName(clinic.name);
+      setEditLocation(clinic.location);
+    }
   };
 
   const handleUpdateMine = async (e: React.FormEvent) => {
@@ -92,10 +107,49 @@ export function ClinicAdministration({
       const { data } = await clinicService.update(myClinic._id, {
         name: name.trim(),
         location: location.trim(),
+        workingHoursStart,
+        workingHoursEnd,
+        maxAppointmentsPerSlot,
       });
       setMyClinic(data);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to update clinic"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handlePlatformUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editClinicId) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await clinicService.update(editClinicId, {
+        name: editName.trim(),
+        location: editLocation.trim(),
+      });
+      await load();
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to update clinic"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeactivateClinic = async () => {
+    if (!editClinicId) return;
+    if (!window.confirm("Deactivate this clinic? Staff will not be able to sign in.")) {
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await clinicService.deactivate(editClinicId);
+      setEditClinicId(null);
+      await load();
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to deactivate clinic"));
     } finally {
       setSaving(false);
     }
@@ -198,6 +252,7 @@ export function ClinicAdministration({
                       <TableRow>
                         <TableHead>Name</TableHead>
                         <TableHead>Location</TableHead>
+                        <TableHead>Status</TableHead>
                         <TableHead />
                       </TableRow>
                     </TableHeader>
@@ -211,6 +266,9 @@ export function ClinicAdministration({
                         >
                           <TableCell className="font-medium">{c.name}</TableCell>
                           <TableCell>{c.location}</TableCell>
+                          <TableCell>
+                            {c.isActive === false ? "Inactive" : "Active"}
+                          </TableCell>
                           <TableCell className="text-right">
                             <Button
                               type="button"
@@ -231,6 +289,55 @@ export function ClinicAdministration({
               </CardContent>
             </Card>
           </div>
+
+          {editClinicId && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Edit selected clinic</CardTitle>
+                <CardDescription>
+                  Update tenant details or deactivate the clinic
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <form
+                  onSubmit={handlePlatformUpdate}
+                  className="mx-auto max-w-md space-y-4"
+                >
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-clinic-name">Name</Label>
+                    <Input
+                      id="edit-clinic-name"
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-clinic-location">Location</Label>
+                    <Input
+                      id="edit-clinic-location"
+                      value={editLocation}
+                      onChange={(e) => setEditLocation(e.target.value)}
+                      required
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="submit" disabled={saving}>
+                      {saving ? "Saving…" : "Save changes"}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      disabled={saving}
+                      onClick={() => void handleDeactivateClinic()}
+                    >
+                      Deactivate clinic
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          )}
         </>
       ) : (
         <Card>
@@ -239,7 +346,9 @@ export function ClinicAdministration({
               <Building2 className="size-4" />
               Your clinic
             </CardTitle>
-            <CardDescription>Update name and location</CardDescription>
+            <CardDescription>
+              Clinic profile, working hours, and appointment limits
+            </CardDescription>
           </CardHeader>
           <CardContent>
             <form
@@ -262,6 +371,39 @@ export function ClinicAdministration({
                   value={location}
                   onChange={(e) => setLocation(e.target.value)}
                   required
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label htmlFor="hours-start">Opens</Label>
+                  <Input
+                    id="hours-start"
+                    type="time"
+                    value={workingHoursStart}
+                    onChange={(e) => setWorkingHoursStart(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="hours-end">Closes</Label>
+                  <Input
+                    id="hours-end"
+                    type="time"
+                    value={workingHoursEnd}
+                    onChange={(e) => setWorkingHoursEnd(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="max-slot">Max appointments per slot</Label>
+                <Input
+                  id="max-slot"
+                  type="number"
+                  min={1}
+                  max={20}
+                  value={maxAppointmentsPerSlot}
+                  onChange={(e) =>
+                    setMaxAppointmentsPerSlot(Number(e.target.value))
+                  }
                 />
               </div>
               <Button type="submit" disabled={saving}>

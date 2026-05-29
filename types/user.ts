@@ -7,6 +7,7 @@ export interface StaffUser {
   phone?: string;
   role: UserRole;
   clinicId: string;
+  isActive: boolean;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -26,4 +27,5 @@ export interface UpdateStaffPayload {
   phone?: string;
   role?: UserRole;
   password?: string;
+  isActive?: boolean;
 }

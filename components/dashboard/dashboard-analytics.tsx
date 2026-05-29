@@ -141,33 +141,14 @@ export function DashboardAnalytics() {
         </div>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         {showPatients && (
-          <KpiCard
-            label="Registered patients"
-            value={kpis.patientsTotal}
-            hint="All time in your clinic"
-            icon={Users}
-          />
-        )}
-        {showQueue && (
           <>
             <KpiCard
-              label="Waiting now"
-              value={kpis.queueWaiting}
-              hint={
-                kpis.queueServing > 0
-                  ? `${kpis.queueServing} currently being served`
-                  : "Walk-in queue"
-              }
-              icon={Clock}
-              accent={kpis.queueWaiting > 0}
-            />
-            <KpiCard
-              label="Served today"
-              value={kpis.queueCompletedToday}
-              hint={`${kpis.queueTotalToday} total tokens today`}
-              icon={CheckCircle2}
+              label="Patients today"
+              value={kpis.patientsCreatedToday}
+              hint={`${kpis.patientsTotal} registered all time`}
+              icon={Users}
             />
           </>
         )}
@@ -178,6 +159,39 @@ export function DashboardAnalytics() {
             hint={`${kpis.appointmentsArrivedToday} arrived · ${kpis.appointmentsScheduledToday} upcoming`}
             icon={CalendarCheck}
           />
+        )}
+        {showQueue && (
+          <>
+            <KpiCard
+              label="Queue today"
+              value={kpis.queueTotalToday}
+              hint={`${kpis.queueWaiting} waiting · ${kpis.queueServing} serving`}
+              icon={ListOrdered}
+            />
+            <KpiCard
+              label="Waiting now"
+              value={kpis.queueWaiting}
+              hint="Walk-in queue"
+              icon={Clock}
+              accent={kpis.queueWaiting > 0}
+            />
+            <KpiCard
+              label="Served today"
+              value={kpis.queueCompletedToday}
+              hint="Completed tokens"
+              icon={CheckCircle2}
+            />
+            <KpiCard
+              label="Avg wait"
+              value={
+                kpis.averageWaitMinutes != null
+                  ? `${kpis.averageWaitMinutes}m`
+                  : "—"
+              }
+              hint="Completed visits today"
+              icon={Activity}
+            />
+          </>
         )}
       </div>
 
@@ -321,8 +335,27 @@ export function DashboardAnalytics() {
             </ChartCard>
 
             <ChartCard
+              title="Peak hours today"
+              description="Appointment volume by time slot"
+            >
+              {stats.peakHoursToday.some((s) => s.count > 0) ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stats.peakHoursToday}>
+                    <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} vertical={false} />
+                    <XAxis dataKey="slot" tick={chartAxisTick} axisLine={false} tickLine={false} />
+                    <YAxis allowDecimals={false} tick={chartAxisTick} axisLine={false} tickLine={false} width={32} />
+                    <Tooltip contentStyle={chartTooltipStyle.contentStyle} />
+                    <Bar dataKey="count" name="Appointments" fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <EmptyChart message="No appointments today" />
+              )}
+            </ChartCard>
+
+            <ChartCard
               title="Slot utilization today"
-              description="Bookings per time slot (max 5 each)"
+              description="Bookings vs capacity per slot"
               className="md:col-span-2 xl:col-span-1"
             >
               {slotChartData.length > 0 ? (

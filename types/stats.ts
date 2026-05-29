@@ -25,8 +25,14 @@ export interface SlotUtilization {
   capacity: number;
 }
 
+export interface SlotCount {
+  slot: string;
+  count: number;
+}
+
 export interface ClinicDashboardKpis {
   patientsTotal: number;
+  patientsCreatedToday: number;
   queueWaiting: number;
   queueServing: number;
   queueCompletedToday: number;
@@ -34,6 +40,7 @@ export interface ClinicDashboardKpis {
   appointmentsToday: number;
   appointmentsArrivedToday: number;
   appointmentsScheduledToday: number;
+  averageWaitMinutes: number | null;
 }
 
 export interface ClinicDashboardStats {
@@ -47,11 +54,13 @@ export interface ClinicDashboardStats {
   queueStatusToday: StatusCount[];
   appointmentStatusToday: StatusCount[];
   appointmentsBySlotToday: SlotUtilization[];
+  peakHoursToday: SlotCount[];
 }
 
 export interface ClinicOverviewRow {
   clinicId: string;
   name: string;
+  isActive: boolean;
   patientsTotal: number;
   queueWaiting: number;
   queueTotalToday: number;
@@ -75,6 +84,7 @@ export interface PlatformDashboardStats {
   today: string;
   kpis: PlatformDashboardKpis;
   clinicsOverview: ClinicOverviewRow[];
+  clinicsGrowth: DaySeriesPoint[];
   queueLast7Days: QueueDaySeriesPoint[];
   appointmentsLast7Days: AppointmentDaySeriesPoint[];
   queueStatusToday: StatusCount[];
@@ -96,6 +106,3 @@ export function isClinicDashboardStats(
 ): data is ClinicDashboardStats {
   return data.scope === "clinic";
 }
-
-/** @deprecated Use ClinicDashboardStats */
-export type DashboardStats = Omit<ClinicDashboardStats, "scope" | "clinicId">;

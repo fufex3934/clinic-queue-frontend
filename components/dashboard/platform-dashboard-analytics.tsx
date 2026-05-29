@@ -130,6 +130,17 @@ export function PlatformDashboardAnalytics() {
   const hasQueueTrend = stats.queueLast7Days.some((d) => d.total > 0);
   const hasApptTrend = stats.appointmentsLast7Days.some((d) => d.total > 0);
   const hasClinics = stats.clinicsOverview.length > 0;
+  const hasClinicGrowth = stats.clinicsGrowth.some((d) => d.total > 0);
+  const patientsPerClinic = clinicBarData.map((c) => ({
+    name: c.name,
+    fullName: c.fullName,
+    patients: c.patients,
+  }));
+  const appointmentsPerClinic = clinicBarData.map((c) => ({
+    name: c.name,
+    fullName: c.fullName,
+    appointments: c.appointments,
+  }));
 
   return (
     <div className="space-y-6">
@@ -149,7 +160,7 @@ export function PlatformDashboardAnalytics() {
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
         <KpiCard
           label="Active clinics"
           value={kpis.clinicsTotal}
@@ -159,8 +170,14 @@ export function PlatformDashboardAnalytics() {
         <KpiCard
           label="Total patients"
           value={kpis.patientsTotal}
-          hint={`${kpis.staffTotal} staff accounts`}
+          hint="Across all clinics"
           icon={Users}
+        />
+        <KpiCard
+          label="Total staff"
+          value={kpis.staffTotal}
+          hint="Clinic admin & reception accounts"
+          icon={UserCog}
         />
         <KpiCard
           label="Waiting (all clinics)"
@@ -237,8 +254,68 @@ export function PlatformDashboardAnalytics() {
       </div>
 
       <ChartCard
-        title="Today by clinic"
-        description="Compare waiting patients and appointments per tenant"
+        title="Clinics growth (7 days)"
+        description="New clinics registered per day"
+        className="lg:col-span-2"
+      >
+        {hasClinicGrowth ? (
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={stats.clinicsGrowth}>
+              <defs>
+                <linearGradient id="clinicGrowthFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={CHART_COLORS.primary} stopOpacity={0.35} />
+                  <stop offset="95%" stopColor={CHART_COLORS.primary} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} vertical={false} />
+              <XAxis dataKey="label" tick={chartAxisTick} axisLine={false} tickLine={false} />
+              <YAxis allowDecimals={false} tick={chartAxisTick} axisLine={false} tickLine={false} width={32} />
+              <Tooltip contentStyle={chartTooltipStyle.contentStyle} />
+              <Area type="monotone" dataKey="total" name="New clinics" stroke={CHART_COLORS.primary} fill="url(#clinicGrowthFill)" strokeWidth={2} />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <EmptyChart message="No new clinics in the last 7 days" />
+        )}
+      </ChartCard>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <ChartCard title="Patients per clinic" description="Total registered patients">
+          {hasClinics ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={patientsPerClinic}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} vertical={false} />
+                <XAxis dataKey="name" tick={chartAxisTick} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={chartAxisTick} axisLine={false} tickLine={false} width={32} />
+                <Tooltip contentStyle={chartTooltipStyle.contentStyle} labelFormatter={(_, p) => p?.[0]?.payload?.fullName ?? ""} />
+                <Bar dataKey="patients" name="Patients" fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart message="No clinics yet" />
+          )}
+        </ChartCard>
+
+        <ChartCard title="Appointments per clinic" description="Bookings today by tenant">
+          {hasClinics ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={appointmentsPerClinic}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} vertical={false} />
+                <XAxis dataKey="name" tick={chartAxisTick} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={chartAxisTick} axisLine={false} tickLine={false} width={32} />
+                <Tooltip contentStyle={chartTooltipStyle.contentStyle} labelFormatter={(_, p) => p?.[0]?.payload?.fullName ?? ""} />
+                <Bar dataKey="appointments" name="Appointments" fill={SERIES_PALETTE[2]} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <EmptyChart message="No appointments today" />
+          )}
+        </ChartCard>
+      </div>
+
+      <ChartCard
+        title="Queue activity by clinic"
+        description="Waiting patients and appointments per tenant today"
         className="lg:col-span-2"
       >
         {hasClinics ? (
@@ -321,7 +398,14 @@ export function PlatformDashboardAnalytics() {
               <TableBody>
                 {stats.clinicsOverview.map((row) => (
                   <TableRow key={row.clinicId}>
-                    <TableCell className="font-medium">{row.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {row.name}
+                      {row.isActive === false && (
+                        <span className="ml-2 text-xs text-muted-foreground">
+                          (inactive)
+                        </span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-right tabular-nums">{row.patientsTotal}</TableCell>
                     <TableCell className="text-right tabular-nums">{row.queueWaiting}</TableCell>
                     <TableCell className="text-right tabular-nums">{row.queueTotalToday}</TableCell>

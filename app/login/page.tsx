@@ -124,6 +124,11 @@ export default function LoginPage() {
             >
               {isSubmitting ? "Signing in…" : "Login"}
             </Button>
+            <p className="text-center text-sm">
+              <Link href="/forgot-password" className="text-primary underline">
+                Forgot password?
+              </Link>
+            </p>
           </form>
         </CardContent>
       </Card>

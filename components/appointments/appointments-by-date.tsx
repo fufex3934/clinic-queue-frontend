@@ -28,6 +28,15 @@ import { getErrorMessage } from "@/lib/errors";
 import { getPatientName, getPatientPhone } from "@/lib/patient";
 import { useAuth } from "@/contexts/auth-provider";
 import { canAccessFeature } from "@/lib/permissions";
+import { PlatformClinicSelector } from "@/components/admin/platform-clinic-selector";
+import { useOperationalScope } from "@/hooks/use-operational-scope";
+import {
+  canArriveAppointment,
+  canCancelAppointment,
+  canCompleteAppointment,
+  canConfirmAppointment,
+  canMarkNoShow,
+} from "@/lib/appointment-actions";
 import { appointmentService } from "@/services/appointmentService";
 import type { Appointment } from "@/types";
 import {
@@ -38,6 +47,7 @@ import { AppointmentsLoadingSkeleton } from "./appointments-loading-skeleton";
 
 export function AppointmentsByDate() {
   const { user } = useAuth();
+  const { scope, scopeKey, isScopeReady } = useOperationalScope();
   const canBook = canAccessFeature(user?.role, "appointmentsBook");
   const [date, setDate] = useState(todayDateString());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -46,11 +56,11 @@ export function AppointmentsByDate() {
   const [arrivingId, setArrivingId] = useState<string | null>(null);
 
   const loadAppointments = useCallback(async (selectedDate: string) => {
-    if (!selectedDate) return;
+    if (!selectedDate || !isScopeReady) return;
     setError(null);
     setLoading(true);
     try {
-      const { data } = await appointmentService.getByDate(selectedDate);
+      const { data } = await appointmentService.getByDate(selectedDate, scope);
       setAppointments(data);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to load appointments"));
@@ -58,11 +68,33 @@ export function AppointmentsByDate() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [scope, scopeKey, isScopeReady]);
 
   useEffect(() => {
     loadAppointments(date);
-  }, [date, loadAppointments]);
+  }, [date, loadAppointments, isScopeReady]);
+
+  const patchAppointment = (updated: Appointment) => {
+    setAppointments((prev) =>
+      prev.map((a) => (a._id === updated._id ? updated : a)),
+    );
+  };
+
+  const runStatusAction = async (
+    id: string,
+    action: () => Promise<{ data: Appointment }>,
+  ) => {
+    setArrivingId(id);
+    setError(null);
+    try {
+      const { data } = await action();
+      patchAppointment(data);
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to update appointment"));
+    } finally {
+      setArrivingId(null);
+    }
+  };
 
   const bySlot = appointments.reduce<Record<string, Appointment[]>>((acc, apt) => {
     const slot = apt.timeSlot;
@@ -74,21 +106,10 @@ export function AppointmentsByDate() {
   const slots = Object.keys(bySlot).sort();
   const isToday = date === todayDateString();
 
-  const handleArrive = async (appointmentId: string) => {
-    setArrivingId(appointmentId);
-    setError(null);
-    try {
-      await appointmentService.arrive(appointmentId);
-      await loadAppointments(date);
-    } catch (err: unknown) {
-      setError(getErrorMessage(err, "Failed to check in patient"));
-    } finally {
-      setArrivingId(null);
-    }
-  };
-
   return (
     <div className="mx-auto max-w-6xl space-y-6">
+      <PlatformClinicSelector />
+
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
@@ -202,10 +223,7 @@ export function AppointmentsByDate() {
                         </TableHeader>
                         <TableBody>
                           {bySlot[slot].map((apt) => {
-                            const canArrive =
-                              isToday &&
-                              (apt.status === "scheduled" ||
-                                apt.status === "confirmed");
+                            const busy = arrivingId === apt._id;
 
                             return (
                               <TableRow key={apt._id}>
@@ -220,23 +238,103 @@ export function AppointmentsByDate() {
                                   </div>
                                 </TableCell>
                                 <TableCell className="text-right">
-                                  {canArrive ? (
-                                    <Button
-                                      size="sm"
-                                      variant="secondary"
-                                      disabled={arrivingId === apt._id}
-                                      onClick={() => handleArrive(apt._id)}
-                                    >
-                                      <LogIn className="mr-1 size-3" />
-                                      {arrivingId === apt._id
-                                        ? "Checking in…"
-                                        : "Mark arrived"}
-                                    </Button>
-                                  ) : apt.status === "arrived" ? (
-                                    <span className="text-xs text-muted-foreground">
-                                      In queue flow
-                                    </span>
-                                  ) : null}
+                                  <div className="flex flex-wrap justify-end gap-1">
+                                    {canConfirmAppointment(apt.status) && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        disabled={busy}
+                                        onClick={() =>
+                                          void runStatusAction(apt._id, () =>
+                                            appointmentService.confirm(
+                                              apt._id,
+                                              scope,
+                                            ),
+                                          )
+                                        }
+                                      >
+                                        Confirm
+                                      </Button>
+                                    )}
+                                    {canArriveAppointment(apt.status, isToday) && (
+                                      <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        disabled={busy}
+                                        onClick={() =>
+                                          void runStatusAction(apt._id, async () => {
+                                            const res =
+                                              await appointmentService.arrive(
+                                                apt._id,
+                                                scope,
+                                              );
+                                            return {
+                                              data: res.data.appointment,
+                                            };
+                                          })
+                                        }
+                                      >
+                                        <LogIn className="mr-1 size-3" />
+                                        Arrived
+                                      </Button>
+                                    )}
+                                    {canCompleteAppointment(apt.status) && (
+                                      <Button
+                                        size="sm"
+                                        variant="default"
+                                        disabled={busy}
+                                        onClick={() =>
+                                          void runStatusAction(apt._id, () =>
+                                            appointmentService.complete(
+                                              apt._id,
+                                              scope,
+                                            ),
+                                          )
+                                        }
+                                      >
+                                        Complete
+                                      </Button>
+                                    )}
+                                    {canMarkNoShow(apt.status) && (
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        disabled={busy}
+                                        onClick={() =>
+                                          void runStatusAction(apt._id, () =>
+                                            appointmentService.noShow(
+                                              apt._id,
+                                              scope,
+                                            ),
+                                          )
+                                        }
+                                      >
+                                        No-show
+                                      </Button>
+                                    )}
+                                    {canCancelAppointment(apt.status) && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        disabled={busy}
+                                        onClick={() =>
+                                          void runStatusAction(apt._id, () =>
+                                            appointmentService.cancel(
+                                              apt._id,
+                                              scope,
+                                            ),
+                                          )
+                                        }
+                                      >
+                                        Cancel
+                                      </Button>
+                                    )}
+                                    {apt.status === "arrived" && (
+                                      <span className="text-xs text-muted-foreground">
+                                        In queue
+                                      </span>
+                                    )}
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             );

@@ -11,7 +11,7 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-provider";
-import { canAccessFeature, NAV_LINKS } from "@/lib/permissions";
+import { canAccessFeature, NAV_GROUPS, NAV_LINKS } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import type { AppFeature } from "@/lib/permissions";
 
@@ -42,27 +42,41 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 p-3">
-        {NAV_LINKS.filter(({ feature }) =>
-          canAccessFeature(user?.role, feature),
-        ).map(({ href, label, feature, exact }) => {
-          const Icon = navIcons[feature];
+      <nav className="flex flex-1 flex-col gap-4 overflow-y-auto p-3">
+        {NAV_GROUPS.map((group) => {
+          const links = NAV_LINKS.filter(
+            ({ feature }) =>
+              group.features.includes(feature) &&
+              canAccessFeature(user?.role, feature),
+          );
+          if (links.length === 0) return null;
           return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                (exact
-                  ? pathname === href
-                  : pathname === href || pathname.startsWith(`${href}/`))
-                  ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                  : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
-              )}
-            >
-              <Icon className="size-4 shrink-0" />
-              {label}
-            </Link>
+            <div key={group.label} className="space-y-1">
+              <p className="px-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {group.label}
+              </p>
+              {links.map(({ href, label, feature, exact }) => {
+                const Icon = navIcons[feature];
+                return (
+                  <Link
+                    key={href}
+                    href={href}
+                    className={cn(
+                      "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                      (exact
+                        ? pathname === href
+                        : pathname === href ||
+                          pathname.startsWith(`${href}/`))
+                        ? "bg-sidebar-accent text-sidebar-accent-foreground"
+                        : "text-sidebar-foreground/80 hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground",
+                    )}
+                  >
+                    <Icon className="size-4 shrink-0" />
+                    {label}
+                  </Link>
+                );
+              })}
+            </div>
           );
         })}
       </nav>

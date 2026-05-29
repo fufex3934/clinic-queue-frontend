@@ -24,4 +24,18 @@ export const authService = {
   getSession() {
     return authClient.get<SessionResponse>("/me");
   },
+
+  forgotPassword(identifier: string) {
+    return authClient.post<{ message: string; resetToken?: string }>(
+      "/forgot-password",
+      { identifier },
+    );
+  },
+
+  resetPassword(token: string, password: string) {
+    return authClient.post<{ message: string }>("/reset-password", {
+      token,
+      password,
+    });
+  },
 };

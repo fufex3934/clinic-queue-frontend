@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -61,13 +62,25 @@ export function ChartCard({
   children: React.ReactNode;
   className?: string;
 }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <Card className={className}>
       <CardHeader className="pb-2">
         <CardTitle className="text-base">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
-      <CardContent className="h-[280px]">{children}</CardContent>
+      <CardContent className="h-[280px] min-h-[280px] w-full min-w-0">
+        {mounted ? (
+          <div className="h-full min-h-[240px] w-full min-w-0">{children}</div>
+        ) : (
+          <Skeleton className="h-full min-h-[240px] w-full rounded-md" />
+        )}
+      </CardContent>
     </Card>
   );
 }

@@ -20,9 +20,14 @@ import type { Patient } from "@/types";
 interface AddToQueueDialogProps {
   onAdded: () => void;
   disabled?: boolean;
+  scope?: { clinicId?: string };
 }
 
-export function AddToQueueDialog({ onAdded, disabled }: AddToQueueDialogProps) {
+export function AddToQueueDialog({
+  onAdded,
+  disabled,
+  scope,
+}: AddToQueueDialogProps) {
   const [open, setOpen] = useState(false);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [patientId, setPatientId] = useState("");
@@ -31,15 +36,15 @@ export function AddToQueueDialog({ onAdded, disabled }: AddToQueueDialogProps) {
 
   useEffect(() => {
     if (!open) return;
-    void patientService.list().then(({ data }) => setPatients(data));
-  }, [open]);
+    void patientService.list(scope).then(({ data }) => setPatients(data));
+  }, [open, scope]);
 
   const handleAdd = async () => {
     if (!patientId) return;
     setLoading(true);
     setError(null);
     try {
-      await queueService.add({ patientId });
+      await queueService.add({ patientId }, scope);
       setOpen(false);
       setPatientId("");
       onAdded();

@@ -1,6 +1,6 @@
 import type { PatientRef } from "./patient";
 
-export type QueueStatus = "waiting" | "serving" | "done";
+export type QueueStatus = "waiting" | "serving" | "done" | "skipped";
 
 export interface QueueEntry {
   _id: string;

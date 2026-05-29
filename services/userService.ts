@@ -19,4 +19,8 @@ export const userService = {
   update(id: string, payload: UpdateStaffPayload) {
     return api.patch<StaffUser>(`/users/${id}`, payload);
   },
+
+  getById(id: string) {
+    return api.get<StaffUser>(`/users/${id}`);
+  },
 };

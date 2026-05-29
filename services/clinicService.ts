@@ -21,4 +21,8 @@ export const clinicService = {
   update(id: string, payload: UpdateClinicPayload) {
     return api.patch<Clinic>(`/clinics/${id}`, payload);
   },
+
+  deactivate(id: string) {
+    return api.delete<Clinic>(`/clinics/${id}`);
+  },
 };

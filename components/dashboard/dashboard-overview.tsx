@@ -11,6 +11,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { PlatformClinicSelector } from "@/components/admin/platform-clinic-selector";
 import { DashboardStatsPanel } from "@/components/dashboard/dashboard-stats-panel";
 import { canAccessFeature } from "@/lib/permissions";
 import type { AppFeature } from "@/lib/permissions";
@@ -81,6 +82,8 @@ export function DashboardOverview() {
       <p className="text-muted-foreground">
         {role ? welcomeCopy[role] : "Loading…"}
       </p>
+
+      <PlatformClinicSelector />
 
       {canAccessFeature(role, "overview") && <DashboardStatsPanel />}
 

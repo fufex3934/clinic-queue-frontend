@@ -5,12 +5,14 @@ const labels: Record<QueueStatus, string> = {
   waiting: "Waiting",
   serving: "Serving",
   done: "Done",
+  skipped: "Skipped",
 };
 
 const variants: Record<QueueStatus, "default" | "secondary" | "outline"> = {
   waiting: "secondary",
   serving: "default",
   done: "outline",
+  skipped: "outline",
 };
 
 export function QueueStatusBadge({ status }: { status: QueueStatus }) {

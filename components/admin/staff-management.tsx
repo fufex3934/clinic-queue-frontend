@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Link from "next/link";
 import { RefreshCw, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,6 +55,8 @@ export function StaffManagement({
   const [password, setPassword] = useState("");
   const [role, setRole] = useState<UserRole>("receptionist");
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [resetPasswordId, setResetPasswordId] = useState<string | null>(null);
+  const [newPassword, setNewPassword] = useState("");
 
   const assignableRoles = isPlatformAdmin
     ? PLATFORM_ASSIGNABLE_ROLES
@@ -103,6 +106,37 @@ export function StaffManagement({
       setError(getErrorMessage(err, "Failed to create staff account"));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleResetPassword = async (memberId: string) => {
+    if (newPassword.length < 8) {
+      setError("Password must be at least 8 characters");
+      return;
+    }
+    setUpdatingId(memberId);
+    setError(null);
+    try {
+      await userService.update(memberId, { password: newPassword });
+      setResetPasswordId(null);
+      setNewPassword("");
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to reset password"));
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleToggleActive = async (member: StaffUser) => {
+    setUpdatingId(member.id);
+    setError(null);
+    try {
+      await userService.update(member.id, { isActive: !member.isActive });
+      await loadStaff();
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to update account status"));
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -242,6 +276,8 @@ export function StaffManagement({
                     <TableHead>Name</TableHead>
                     <TableHead>Contact</TableHead>
                     <TableHead>Role</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -253,7 +289,12 @@ export function StaffManagement({
                     return (
                       <TableRow key={member.id}>
                         <TableCell className="font-medium">
-                          {member.name}
+                          <Link
+                            href={`/dashboard/admin/users/${member.id}`}
+                            className="text-primary hover:underline"
+                          >
+                            {member.name}
+                          </Link>
                           {isSelf && (
                             <span className="ml-2 text-xs text-muted-foreground">
                               (you)
@@ -287,6 +328,65 @@ export function StaffManagement({
                               {ROLE_LABELS[member.role]}
                             </Badge>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          {!isSelf && member.role !== "platform_admin" ? (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant={member.isActive ? "outline" : "default"}
+                              disabled={updatingId === member.id}
+                              onClick={() => void handleToggleActive(member)}
+                            >
+                              {member.isActive ? "Disable" : "Enable"}
+                            </Button>
+                          ) : (
+                            <Badge variant="secondary">
+                              {member.isActive ? "Active" : "Disabled"}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {!isSelf && member.role !== "platform_admin" ? (
+                            resetPasswordId === member.id ? (
+                              <div className="flex flex-col items-end gap-2 sm:flex-row">
+                                <Input
+                                  type="password"
+                                  className="h-8 w-36"
+                                  placeholder="New password"
+                                  value={newPassword}
+                                  onChange={(e) => setNewPassword(e.target.value)}
+                                  minLength={8}
+                                />
+                                <Button
+                                  size="sm"
+                                  disabled={updatingId === member.id}
+                                  onClick={() => void handleResetPassword(member.id)}
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setResetPasswordId(null);
+                                    setNewPassword("");
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => setResetPasswordId(member.id)}
+                              >
+                                Reset password
+                              </Button>
+                            )
+                          ) : null}
                         </TableCell>
                       </TableRow>
                     );

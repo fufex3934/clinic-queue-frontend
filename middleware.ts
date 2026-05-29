@@ -12,8 +12,15 @@ export function middleware(request: NextRequest) {
   const token = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
   const { pathname } = request.nextUrl;
 
+  const roleAlias =
+    pathname === "/platform" ||
+    pathname === "/clinic-admin" ||
+    pathname === "/reception";
+
   const isProtected =
-    pathname.startsWith("/dashboard") || pathname.startsWith("/admin");
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/admin") ||
+    roleAlias;
   const isLogin = pathname === "/login";
 
   if (isProtected) {
@@ -29,6 +36,21 @@ export function middleware(request: NextRequest) {
       );
       clearAccessTokenCookie(response);
       return response;
+    }
+
+    if (roleAlias) {
+      const role = getRoleFromAccessToken(token);
+      if (pathname === "/platform" && role === "platform_admin") {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+      if (pathname === "/clinic-admin" && role === "admin") {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+      if (pathname === "/reception" && role === "receptionist") {
+        return NextResponse.redirect(new URL("/dashboard", request.url));
+      }
+      const home = role ? getDefaultHomePath(role) : "/dashboard";
+      return NextResponse.redirect(new URL(home, request.url));
     }
   }
 
@@ -48,5 +70,12 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin/:path*", "/login"],
+  matcher: [
+    "/dashboard/:path*",
+    "/admin/:path*",
+    "/login",
+    "/platform",
+    "/clinic-admin",
+    "/reception",
+  ],
 };

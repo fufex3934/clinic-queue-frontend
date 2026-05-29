@@ -19,11 +19,14 @@ import {
 } from "@/lib/constants/time-slots";
 import { todayDateString } from "@/lib/date";
 import { getErrorMessage } from "@/lib/errors";
+import { PlatformClinicSelector } from "@/components/admin/platform-clinic-selector";
+import { useOperationalScope } from "@/hooks/use-operational-scope";
 import { appointmentService } from "@/services/appointmentService";
 import { patientService } from "@/services/patientService";
 import type { Appointment, Patient } from "@/types";
 
 export function BookAppointmentForm() {
+  const { scope, scopeKey, isScopeReady } = useOperationalScope();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patientId, setPatientId] = useState("");
@@ -34,22 +37,24 @@ export function BookAppointmentForm() {
   const [success, setSuccess] = useState<string | null>(null);
 
   const loadPatients = useCallback(async () => {
-    const { data } = await patientService.list();
+    if (!isScopeReady) return;
+    const { data } = await patientService.list(scope);
     setPatients(data);
-  }, []);
+  }, [scope, scopeKey, isScopeReady]);
 
   const loadAppointments = useCallback(async (selectedDate: string) => {
-    const { data } = await appointmentService.getByDate(selectedDate);
+    if (!isScopeReady) return;
+    const { data } = await appointmentService.getByDate(selectedDate, scope);
     setAppointments(data);
-  }, []);
+  }, [scope, scopeKey, isScopeReady]);
 
   useEffect(() => {
     void loadPatients();
-  }, [loadPatients]);
+  }, [loadPatients, isScopeReady]);
 
   useEffect(() => {
     void loadAppointments(date);
-  }, [date, loadAppointments]);
+  }, [date, loadAppointments, isScopeReady]);
 
   const slotCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -75,7 +80,7 @@ export function BookAppointmentForm() {
     setError(null);
     setSuccess(null);
     try {
-      await appointmentService.book({ patientId, date, timeSlot });
+      await appointmentService.book({ patientId, date, timeSlot }, scope);
       setSuccess(`Booked ${timeSlot} on ${date}`);
       await loadAppointments(date);
     } catch (err: unknown) {
@@ -87,6 +92,7 @@ export function BookAppointmentForm() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
+      <PlatformClinicSelector />
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

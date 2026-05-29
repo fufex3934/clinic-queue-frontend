@@ -1,7 +1,11 @@
 import type { UserRole } from "@/types/auth";
 
-/** Day-to-day clinic operations (single clinic). */
-export const OPERATIONAL_ROLES: UserRole[] = ["admin", "receptionist"];
+/** Day-to-day clinic operations (single clinic or platform clinic view). */
+export const OPERATIONAL_ROLES: UserRole[] = [
+  "admin",
+  "receptionist",
+  "platform_admin",
+];
 
 /** Clinic / platform staff management. */
 export const ADMINISTRATION_ROLES: UserRole[] = ["admin", "platform_admin"];
@@ -59,6 +63,20 @@ export const NAV_LINKS: {
     label: "Administration",
     feature: "administration",
   },
+  {
+    href: "/dashboard/appointments/book",
+    label: "Book Appointment",
+    feature: "appointmentsBook",
+  },
+];
+
+export const NAV_GROUPS: { label: string; features: AppFeature[] }[] = [
+  { label: "Overview", features: ["overview"] },
+  {
+    label: "Operations",
+    features: ["patients", "queue", "appointments", "appointmentsBook"],
+  },
+  { label: "Administration", features: ["administration"] },
 ];
 
 export function canAccessFeature(
