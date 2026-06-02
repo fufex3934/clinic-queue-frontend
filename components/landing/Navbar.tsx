@@ -33,9 +33,14 @@ export function Navbar() {
           ))}
         </nav>
 
-        <Button render={<Link href="#contact" />} size="sm">
-          Start Free Trial
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" render={<Link href="/login" />}>
+            Staff Login
+          </Button>
+          <Button render={<Link href="#contact" />} size="sm">
+            Start Free Trial
+          </Button>
+        </div>
       </div>
     </header>
   );

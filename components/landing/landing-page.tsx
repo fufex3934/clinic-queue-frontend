@@ -46,8 +46,8 @@ export function LandingPage() {
             </div>
             <span className="font-semibold tracking-tight">Clinic Queue</span>
           </Link>
-          <Button variant="outline" render={<Link href="/login" />}>
-            Staff login
+          <Button variant="outline" render={<Link href="#contact" />}>
+            Start Free Trial
           </Button>
         </div>
       </header>
@@ -66,16 +66,16 @@ export function LandingPage() {
               appointments — built for reception teams and admin staff.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Button size="lg" render={<Link href="/login" />}>
+              <Button size="lg" render={<Link href="#contact" />}>
                 Get started
                 <ArrowRight className="ml-2 size-4" />
               </Button>
               <Button
                 size="lg"
                 variant="outline"
-                render={<Link href="/login" />}
+                render={<Link href="#contact" />}
               >
-                Staff login
+                Book demo
               </Button>
             </div>
           </div>
@@ -109,16 +109,16 @@ export function LandingPage() {
           <div className="rounded-2xl border bg-primary px-6 py-12 text-center text-primary-foreground md:px-12">
             <h2 className="text-2xl font-semibold">Ready to open the dashboard?</h2>
             <p className="mx-auto mt-2 max-w-md text-primary-foreground/85">
-              Sign in with your staff account to manage today&apos;s queue and
-              appointment schedule.
+              Start your free trial and see how quickly your clinic can improve
+              patient flow.
             </p>
             <Button
               size="lg"
               variant="secondary"
               className="mt-8"
-              render={<Link href="/login" />}
+              render={<Link href="#contact" />}
             >
-              Go to login
+              Contact sales
               <ArrowRight className="ml-2 size-4" />
             </Button>
           </div>
