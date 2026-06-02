@@ -6,6 +6,8 @@ export interface ApiErrorBody {
   statusCode: number;
   message: string;
   error: string;
+  timestamp?: string;
+  path?: string;
 }
 
 const api = axios.create({
