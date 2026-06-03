@@ -5,9 +5,12 @@ import { usePathname } from "next/navigation";
 import {
   Building2,
   CalendarDays,
+  CreditCard,
+  DollarSign,
   LayoutDashboard,
   ListOrdered,
   Stethoscope,
+  UserCog,
   Users,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-provider";
@@ -22,6 +25,9 @@ const navIcons: Record<AppFeature, typeof LayoutDashboard> = {
   appointments: CalendarDays,
   appointmentsBook: CalendarDays,
   administration: Building2,
+  billing: CreditCard,
+  paymentsAdmin: DollarSign,
+  platformUsers: UserCog,
 };
 
 export function Sidebar() {

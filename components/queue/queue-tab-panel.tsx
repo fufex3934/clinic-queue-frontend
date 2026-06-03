@@ -12,17 +12,21 @@ import {
 } from "@/components/ui/table";
 import { getPatientName, getPatientPhone } from "@/lib/patient";
 import type { QueueEntry } from "@/types";
+import { QueueReorderControls } from "./queue-reorder-controls";
 import { QueueStatusBadge } from "./queue-status-badge";
 
 interface QueueTabPanelProps {
   entries: QueueEntry[];
+  allWaiting?: QueueEntry[];
   showSkip?: boolean;
   showRemove?: boolean;
   showForceServe?: boolean;
+  showReorder?: boolean;
   busyId: string | null;
   onSkip?: (id: string) => void;
   onRemove?: (id: string) => void;
   onForceServe?: (id: string) => void;
+  onReorder?: (orderedIds: string[]) => Promise<void>;
 }
 
 export function QueueTabPanel({
@@ -30,10 +34,13 @@ export function QueueTabPanel({
   showSkip,
   showRemove,
   showForceServe,
+  showReorder,
+  allWaiting,
   busyId,
   onSkip,
   onRemove,
   onForceServe,
+  onReorder,
 }: QueueTabPanelProps) {
   if (entries.length === 0) {
     return (
@@ -43,7 +50,8 @@ export function QueueTabPanel({
     );
   }
 
-  const hasActions = showSkip || showRemove || showForceServe;
+  const hasActions =
+    showSkip || showRemove || showForceServe || showReorder;
 
   return (
     <Table>
@@ -76,7 +84,18 @@ export function QueueTabPanel({
             </TableCell>
             {hasActions && (
               <TableCell className="text-right">
-                <div className="flex justify-end gap-1">
+                <div className="flex justify-end items-center gap-1">
+                  {showReorder &&
+                    entry.status === "waiting" &&
+                    onReorder &&
+                    allWaiting && (
+                      <QueueReorderControls
+                        entries={allWaiting}
+                        entryId={entry._id}
+                        onReorder={onReorder}
+                        disabled={busyId === entry._id}
+                      />
+                    )}
                   {showSkip && entry.status === "waiting" && onSkip && (
                     <Button
                       size="sm"

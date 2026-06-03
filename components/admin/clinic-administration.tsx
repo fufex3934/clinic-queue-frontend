@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Building2, Plus, RefreshCw } from "lucide-react";
+import { Building2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -22,7 +23,12 @@ import {
 } from "@/components/ui/table";
 import { ErrorAlert } from "@/components/shared/error-alert";
 import { EmptyState } from "@/components/shared/empty-state";
+import { ListDataToolbar } from "@/components/shared/list-data-toolbar";
+import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { useClinicContext } from "@/contexts/clinic-context";
+import { useConfirm } from "@/contexts/confirm-dialog-provider";
 import { getErrorMessage } from "@/lib/errors";
+import { notifyError, notifySuccess } from "@/lib/toast";
 import { clinicService } from "@/services/clinicService";
 import type { Clinic } from "@/types/clinic";
 
@@ -37,6 +43,8 @@ export function ClinicAdministration({
   userClinicId,
   onClinicChange,
 }: ClinicAdministrationProps) {
+  const confirm = useConfirm();
+  const { refreshClinics, isPlatformView } = useClinicContext();
   const [clinics, setClinics] = useState<Clinic[]>([]);
   const [myClinic, setMyClinic] = useState<Clinic | null>(null);
   const [selectedId, setSelectedId] = useState(userClinicId);
@@ -53,18 +61,64 @@ export function ClinicAdministration({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [clinicSearch, setClinicSearch] = useState("");
+  const [clinicPage, setClinicPage] = useState(1);
+  const [clinicLimit, setClinicLimit] = useState(10);
+  const [clinicSortBy, setClinicSortBy] = useState("name");
+  const [clinicSortOrder, setClinicSortOrder] = useState<"asc" | "desc">("asc");
+  const [clinicTotal, setClinicTotal] = useState(0);
+  const [clinicTotalPages, setClinicTotalPages] = useState(1);
+  const debouncedClinicSearch = useDebouncedValue(clinicSearch, 400);
+
+  const syncPlatformClinicList = useCallback(async () => {
+    if (isPlatformView) {
+      await refreshClinics();
+    }
+  }, [isPlatformView, refreshClinics]);
+
+  const applyClinicToForm = useCallback((clinic: Clinic) => {
+    setSelectedId(clinic._id);
+    setEditClinicId(clinic._id);
+    setEditName(clinic.name);
+    setEditLocation(clinic.location);
+    setWorkingHoursStart(clinic.workingHoursStart ?? "09:00");
+    setWorkingHoursEnd(clinic.workingHoursEnd ?? "17:00");
+    setMaxAppointmentsPerSlot(clinic.maxAppointmentsPerSlot ?? 5);
+  }, []);
+
+  const loadPlatformClinics = useCallback(async () => {
+    const { data } = await clinicService.list({
+      page: clinicPage,
+      limit: clinicLimit,
+      search: debouncedClinicSearch.trim() || undefined,
+      sortBy: clinicSortBy,
+      sortOrder: clinicSortOrder,
+    });
+    setClinics(data.items);
+    setClinicTotal(data.total);
+    setClinicTotalPages(data.totalPages);
+    return data.items;
+  }, [
+    clinicPage,
+    clinicLimit,
+    debouncedClinicSearch,
+    clinicSortBy,
+    clinicSortOrder,
+  ]);
 
   const load = useCallback(async () => {
     setError(null);
     setLoading(true);
     try {
       if (isPlatformAdmin) {
-        const { data } = await clinicService.list();
-        setClinics(data);
-        const initial =
-          data.find((c) => c._id === userClinicId)?._id ?? data[0]?._id ?? "";
-        setSelectedId(initial);
-        onClinicChange?.(initial);
+        const items = await loadPlatformClinics();
+        const initialClinic =
+          items.find((c) => c._id === (selectedId || userClinicId)) ??
+          items[0];
+        if (initialClinic) {
+          applyClinicToForm(initialClinic);
+          onClinicChange?.(initialClinic._id);
+        }
       } else {
         const { data } = await clinicService.getMine();
         setMyClinic(data);
@@ -81,21 +135,36 @@ export function ClinicAdministration({
     } finally {
       setLoading(false);
     }
-  }, [isPlatformAdmin, onClinicChange, userClinicId]);
+  }, [
+    isPlatformAdmin,
+    onClinicChange,
+    userClinicId,
+    loadPlatformClinics,
+    selectedId,
+    applyClinicToForm,
+  ]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  useEffect(() => {
+    if (!isPlatformAdmin) return;
+    setClinicPage(1);
+  }, [debouncedClinicSearch, clinicSortBy, clinicSortOrder, clinicLimit, isPlatformAdmin]);
+
+  useEffect(() => {
+    if (!isPlatformAdmin) return;
+    void loadPlatformClinics().catch((err: unknown) => {
+      setError(getErrorMessage(err, "Failed to load clinics"));
+    });
+  }, [isPlatformAdmin, loadPlatformClinics]);
+
   const handleSelectClinic = (id: string) => {
-    setSelectedId(id);
-    onClinicChange?.(id);
     const clinic = clinics.find((c) => c._id === id);
-    if (clinic) {
-      setEditClinicId(clinic._id);
-      setEditName(clinic.name);
-      setEditLocation(clinic.location);
-    }
+    if (!clinic) return;
+    applyClinicToForm(clinic);
+    onClinicChange?.(id);
   };
 
   const handleUpdateMine = async (e: React.FormEvent) => {
@@ -112,8 +181,10 @@ export function ClinicAdministration({
         maxAppointmentsPerSlot,
       });
       setMyClinic(data);
+      notifySuccess("Clinic settings saved", "Your clinic profile was updated.");
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to update clinic"));
+      notifyError(err, "Could not save clinic settings");
     } finally {
       setSaving(false);
     }
@@ -128,28 +199,119 @@ export function ClinicAdministration({
       await clinicService.update(editClinicId, {
         name: editName.trim(),
         location: editLocation.trim(),
+        workingHoursStart,
+        workingHoursEnd,
+        maxAppointmentsPerSlot,
       });
       await load();
+      await syncPlatformClinicList();
+      notifySuccess("Clinic updated", "Tenant settings were saved.");
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to update clinic"));
+      notifyError(err, "Could not update clinic");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeactivateClinic = async () => {
-    if (!editClinicId) return;
-    if (!window.confirm("Deactivate this clinic? Staff will not be able to sign in.")) {
-      return;
-    }
+  const handleDeactivateClinic = async (clinicId?: string) => {
+    const targetId = clinicId ?? editClinicId;
+    if (!targetId) return;
+    const clinicName =
+      clinics.find((c) => c._id === targetId)?.name ?? "this clinic";
+    const ok = await confirm({
+      title: "Deactivate clinic?",
+      description: `${clinicName} will be suspended. Staff will not be able to sign in until you reactivate the clinic.`,
+      confirmLabel: "Deactivate",
+      cancelLabel: "Keep active",
+      variant: "destructive",
+    });
+    if (!ok) return;
     setSaving(true);
     setError(null);
     try {
-      await clinicService.deactivate(editClinicId);
-      setEditClinicId(null);
+      await clinicService.deactivate(targetId);
       await load();
+      await syncPlatformClinicList();
+      handleSelectClinic(targetId);
+      notifySuccess(
+        "Clinic deactivated",
+        `${clinicName} is suspended until you activate it again.`,
+      );
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to deactivate clinic"));
+      notifyError(err, "Could not deactivate clinic");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleActivateClinic = async (clinicId?: string) => {
+    const targetId = clinicId ?? editClinicId;
+    if (!targetId) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await clinicService.update(targetId, { isActive: true });
+      await load();
+      await syncPlatformClinicList();
+      handleSelectClinic(targetId);
+      notifySuccess(
+        "Clinic activated",
+        `${clinics.find((c) => c._id === targetId)?.name ?? "Clinic"} staff can sign in again.`,
+      );
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to activate clinic"));
+      notifyError(err, "Could not activate clinic");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const selectedClinic = clinics.find((c) => c._id === editClinicId);
+  const selectedClinicInactive = selectedClinic?.isActive === false;
+
+  const handleDeleteClinicPermanent = async (clinic: Clinic) => {
+    if (clinic.isActive !== false) {
+      notifyError(
+        null,
+        "Deactivate first",
+        "Deactivate the clinic before permanently deleting it.",
+      );
+      return;
+    }
+    const ok = await confirm({
+      title: "Delete clinic permanently?",
+      description: `${clinic.name} and all patients, appointments, queue history, staff accounts, and billing data for this tenant will be removed. This cannot be undone.`,
+      confirmLabel: "Delete permanently",
+      cancelLabel: "Cancel",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await clinicService.deletePermanent(clinic._id);
+      const items = await loadPlatformClinics();
+      await syncPlatformClinicList();
+      if (editClinicId === clinic._id) {
+        setEditClinicId(null);
+        const next = items[0];
+        if (next) {
+          applyClinicToForm(next);
+          onClinicChange?.(next._id);
+        } else {
+          setSelectedId("");
+          onClinicChange?.("");
+        }
+      }
+      notifySuccess(
+        "Clinic deleted",
+        `${clinic.name} and its tenant data were permanently removed.`,
+      );
+    } catch (err: unknown) {
+      setError(getErrorMessage(err, "Failed to delete clinic"));
+      notifyError(err, "Could not delete clinic");
     } finally {
       setSaving(false);
     }
@@ -167,9 +329,15 @@ export function ClinicAdministration({
       setNewName("");
       setNewLocation("");
       await load();
+      await syncPlatformClinicList();
       handleSelectClinic(data._id);
+      notifySuccess(
+        "Clinic created",
+        `${data.name} was added. You can assign a clinic admin from Staff.`,
+      );
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to create clinic"));
+      notifyError(err, "Could not create clinic");
     } finally {
       setSaving(false);
     }
@@ -236,11 +404,44 @@ export function ClinicAdministration({
               <CardHeader>
                 <CardTitle className="text-base">All clinics</CardTitle>
                 <CardDescription>
-                  Select a clinic to manage its staff below
+                  Edit, deactivate, or delete tenants. Use Edit to change settings
+                  below.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                {clinics.length === 0 ? (
+              <CardContent className="space-y-4">
+                <ListDataToolbar
+                  search={clinicSearch}
+                  onSearchChange={(v) => {
+                    setClinicSearch(v);
+                    setClinicPage(1);
+                  }}
+                  searchPlaceholder="Search clinic name or location…"
+                  sortBy={clinicSortBy}
+                  sortOptions={[
+                    { value: "name", label: "Name" },
+                    { value: "location", label: "Location" },
+                    { value: "createdAt", label: "Date created" },
+                  ]}
+                  onSortByChange={(v) => {
+                    setClinicSortBy(v);
+                    setClinicPage(1);
+                  }}
+                  sortOrder={clinicSortOrder}
+                  onSortOrderChange={(v) => {
+                    setClinicSortOrder(v);
+                    setClinicPage(1);
+                  }}
+                  page={clinicPage}
+                  totalPages={clinicTotalPages}
+                  total={clinicTotal}
+                  onPageChange={setClinicPage}
+                  limit={clinicLimit}
+                  onLimitChange={(n) => {
+                    setClinicLimit(n);
+                    setClinicPage(1);
+                  }}
+                />
+                {clinics.length === 0 && !loading ? (
                   <EmptyState
                     icon={Building2}
                     title="No clinics"
@@ -253,7 +454,7 @@ export function ClinicAdministration({
                         <TableHead>Name</TableHead>
                         <TableHead>Location</TableHead>
                         <TableHead>Status</TableHead>
-                        <TableHead />
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -267,19 +468,63 @@ export function ClinicAdministration({
                           <TableCell className="font-medium">{c.name}</TableCell>
                           <TableCell>{c.location}</TableCell>
                           <TableCell>
-                            {c.isActive === false ? "Inactive" : "Active"}
+                            <Badge
+                              variant={
+                                c.isActive === false ? "secondary" : "default"
+                              }
+                            >
+                              {c.isActive === false ? "Inactive" : "Active"}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-right">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={
-                                selectedId === c._id ? "default" : "outline"
-                              }
-                              onClick={() => handleSelectClinic(c._id)}
-                            >
-                              {selectedId === c._id ? "Selected" : "Manage"}
-                            </Button>
+                            <div className="flex flex-wrap justify-end gap-1">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant={
+                                  editClinicId === c._id ? "default" : "outline"
+                                }
+                                onClick={() => handleSelectClinic(c._id)}
+                                aria-label={`Edit ${c.name}`}
+                              >
+                                <Pencil className="mr-1 size-3.5" />
+                                Edit
+                              </Button>
+                              {c.isActive === false ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={saving}
+                                  onClick={() => void handleActivateClinic(c._id)}
+                                >
+                                  Activate
+                                </Button>
+                              ) : (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  disabled={saving}
+                                  onClick={() => void handleDeactivateClinic(c._id)}
+                                >
+                                  Deactivate
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="destructive"
+                                disabled={saving}
+                                onClick={() =>
+                                  void handleDeleteClinicPermanent(c)
+                                }
+                                aria-label={`Delete ${c.name}`}
+                              >
+                                <Trash2 className="mr-1 size-3.5" />
+                                Delete
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -295,7 +540,7 @@ export function ClinicAdministration({
               <CardHeader>
                 <CardTitle className="text-base">Edit selected clinic</CardTitle>
                 <CardDescription>
-                  Update tenant details or deactivate the clinic
+                  {selectedClinic?.name} — update profile, hours, and slot limits
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -321,18 +566,62 @@ export function ClinicAdministration({
                       required
                     />
                   </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-hours-start">Opens</Label>
+                      <Input
+                        id="edit-hours-start"
+                        type="time"
+                        value={workingHoursStart}
+                        onChange={(e) => setWorkingHoursStart(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="edit-hours-end">Closes</Label>
+                      <Input
+                        id="edit-hours-end"
+                        type="time"
+                        value={workingHoursEnd}
+                        onChange={(e) => setWorkingHoursEnd(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-max-slot">Max appointments per slot</Label>
+                    <Input
+                      id="edit-max-slot"
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={maxAppointmentsPerSlot}
+                      onChange={(e) =>
+                        setMaxAppointmentsPerSlot(Number(e.target.value))
+                      }
+                    />
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     <Button type="submit" disabled={saving}>
                       {saving ? "Saving…" : "Save changes"}
                     </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      disabled={saving}
-                      onClick={() => void handleDeactivateClinic()}
-                    >
-                      Deactivate clinic
-                    </Button>
+                    {selectedClinicInactive ? (
+                      <Button
+                        type="button"
+                        variant="default"
+                        disabled={saving}
+                        onClick={() => void handleActivateClinic(editClinicId)}
+                      >
+                        Activate clinic
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        disabled={saving}
+                        onClick={() => void handleDeactivateClinic(editClinicId)}
+                      >
+                        Deactivate clinic
+                      </Button>
+                    )}
                   </div>
                 </form>
               </CardContent>

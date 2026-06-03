@@ -23,28 +23,49 @@ export function AppointmentStatusBadge({ status }: { status: AppointmentStatus }
   return <Badge variant={variant}>{labels[status]}</Badge>;
 }
 
-/** Visual journey: scheduled → arrived → (queue) serving → done */
-export function AppointmentFlowHint({ status }: { status: AppointmentStatus }) {
-  const steps = ["scheduled", "arrived", "queued", "serving", "done"] as const;
-  const activeIndex =
-    status === "arrived"
-      ? 1
-      : status === "scheduled" || status === "confirmed"
-        ? 0
-        : -1;
+const lifecycleSteps = [
+  "scheduled",
+  "confirmed",
+  "arrived",
+  "in queue",
+  "serving",
+  "done",
+] as const;
 
+const statusStepIndex: Partial<Record<AppointmentStatus, number>> = {
+  scheduled: 0,
+  confirmed: 1,
+  arrived: 2,
+  completed: 5,
+  cancelled: -1,
+  no_show: -1,
+};
+
+/** Full appointment lifecycle hint. */
+export function AppointmentFlowHint({ status }: { status: AppointmentStatus }) {
+  if (status === "cancelled") {
+    return (
+      <p className="text-xs text-muted-foreground">Cancelled — not in queue</p>
+    );
+  }
+  if (status === "no_show") {
+    return (
+      <p className="text-xs text-muted-foreground">Marked no-show — not in queue</p>
+    );
+  }
+
+  const activeIndex = statusStepIndex[status] ?? -1;
   if (activeIndex < 0) return null;
 
   return (
     <p className="text-xs text-muted-foreground">
-      Flow:{" "}
-      {steps.map((step, i) => (
+      {lifecycleSteps.map((step, i) => (
         <span
           key={step}
           className={i <= activeIndex ? "font-medium text-foreground" : ""}
         >
           {step}
-          {i < steps.length - 1 ? " → " : ""}
+          {i < lifecycleSteps.length - 1 ? " → " : ""}
         </span>
       ))}
     </p>

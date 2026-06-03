@@ -16,6 +16,7 @@ import {
   getStoredOperationalClinicId,
   setStoredOperationalClinicId,
 } from "@/lib/clinic-scope";
+import { fetchAllPaginated } from "@/lib/fetch-all-paginated";
 import { clinicService } from "@/services/clinicService";
 import type { Clinic } from "@/types/clinic";
 
@@ -23,21 +24,28 @@ interface ClinicContextValue {
   clinics: Clinic[];
   operationalClinicId: string | null;
   setOperationalClinicId: (id: string) => void;
+  /** Resolved clinic record for the active operational scope. */
+  activeClinic: Clinic | null;
+  loadingActiveClinic: boolean;
   isPlatformView: boolean;
   loadingClinics: boolean;
   /** Platform admin has a clinic selected for operational APIs. */
   isScopeReady: boolean;
+  /** Reload tenant list after create / update / deactivate / delete. */
+  refreshClinics: () => Promise<void>;
 }
 
-function resolveOperationalClinicId(
-  user: { clinicId: string } | null,
-  isPlatformView: boolean,
-): string | null {
-  if (!user) return null;
-  if (isPlatformView) {
-    return getStoredOperationalClinicId() ?? user.clinicId ?? null;
+function pickDefaultClinicId(clinics: Clinic[]): string | null {
+  const active = clinics.find((c) => c.isActive !== false);
+  return active?._id ?? clinics[0]?._id ?? null;
+}
+
+function resolveStoredClinicId(clinics: Clinic[]): string | null {
+  const stored = getStoredOperationalClinicId();
+  if (stored && clinics.some((c) => c._id === stored)) {
+    return stored;
   }
-  return user.clinicId;
+  return pickDefaultClinicId(clinics);
 }
 
 const ClinicContext = createContext<ClinicContextValue | null>(null);
@@ -49,6 +57,8 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     string | null
   >(null);
   const [loadingClinics, setLoadingClinics] = useState(false);
+  const [activeClinic, setActiveClinic] = useState<Clinic | null>(null);
+  const [loadingActiveClinic, setLoadingActiveClinic] = useState(false);
 
   const isPlatformView = user?.role === "platform_admin";
 
@@ -57,53 +67,115 @@ export function ClinicProvider({ children }: { children: ReactNode }) {
     setStoredOperationalClinicId(id);
   }, []);
 
-  // Sync clinic id before child effects run (avoids platform admin 400 on queue load).
   useLayoutEffect(() => {
-    setOperationalClinicIdState(resolveOperationalClinicId(user, isPlatformView));
+    if (!user) {
+      setOperationalClinicIdState(null);
+      return;
+    }
+    if (!isPlatformView) {
+      setOperationalClinicIdState(user.clinicId);
+    }
+  }, [user, isPlatformView]);
+
+  const refreshClinics = useCallback(async () => {
+    if (!user || !isPlatformView) return;
+    setLoadingClinics(true);
+    try {
+      const items = await fetchAllPaginated((params) =>
+        clinicService.list({ ...params, sortBy: "name", sortOrder: "asc" }),
+      );
+      setClinics(items);
+      const resolved = resolveStoredClinicId(items);
+      if (resolved) {
+        setOperationalClinicIdState(resolved);
+        setStoredOperationalClinicId(resolved);
+      } else {
+        clearStoredOperationalClinicId();
+        setOperationalClinicIdState(null);
+      }
+    } catch {
+      setClinics([]);
+      clearStoredOperationalClinicId();
+      setOperationalClinicIdState(null);
+    } finally {
+      setLoadingClinics(false);
+    }
   }, [user, isPlatformView]);
 
   useEffect(() => {
     if (!user) return;
-
     if (isPlatformView) {
-      setLoadingClinics(true);
-      void clinicService
-        .list()
-        .then(({ data }) => {
-          setClinics(data);
-          const current = resolveOperationalClinicId(user, true);
-          if (current) return;
-          const firstActive = data.find((c) => c.isActive !== false) ?? data[0];
-          if (firstActive) {
-            setOperationalClinicIdState(firstActive._id);
-            setStoredOperationalClinicId(firstActive._id);
-          }
-        })
-        .catch(() => setClinics([]))
-        .finally(() => setLoadingClinics(false));
+      void refreshClinics();
     } else {
       clearStoredOperationalClinicId();
+      setClinics([]);
     }
-  }, [user, isPlatformView]);
+  }, [user, isPlatformView, refreshClinics]);
 
-  const isScopeReady = !isPlatformView || Boolean(operationalClinicId);
+  useEffect(() => {
+    if (!user) {
+      setActiveClinic(null);
+      return;
+    }
+
+    if (isPlatformView) {
+      if (loadingClinics) return;
+      if (!operationalClinicId) {
+        setActiveClinic(null);
+        return;
+      }
+      const fromList = clinics.find((c) => c._id === operationalClinicId);
+      setActiveClinic(fromList ?? null);
+      if (!fromList && clinics.length > 0) {
+        const fallback = pickDefaultClinicId(clinics);
+        if (fallback) {
+          setOperationalClinicIdState(fallback);
+          setStoredOperationalClinicId(fallback);
+        }
+      }
+      return;
+    }
+
+    setLoadingActiveClinic(true);
+    void clinicService
+      .getMine()
+      .then(({ data }) => setActiveClinic(data))
+      .catch(() => setActiveClinic(null))
+      .finally(() => setLoadingActiveClinic(false));
+  }, [
+    user,
+    operationalClinicId,
+    isPlatformView,
+    clinics,
+    loadingClinics,
+  ]);
+
+  const isScopeReady =
+    !isPlatformView ||
+    (!loadingClinics && Boolean(operationalClinicId && activeClinic));
 
   const value = useMemo(
     () => ({
       clinics,
       operationalClinicId,
       setOperationalClinicId,
+      activeClinic,
+      loadingActiveClinic,
       isPlatformView,
       loadingClinics,
       isScopeReady,
+      refreshClinics,
     }),
     [
       clinics,
       operationalClinicId,
       setOperationalClinicId,
+      activeClinic,
+      loadingActiveClinic,
       isPlatformView,
       loadingClinics,
       isScopeReady,
+      refreshClinics,
     ],
   );
 

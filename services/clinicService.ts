@@ -4,14 +4,19 @@ import type {
   CreateClinicPayload,
   UpdateClinicPayload,
 } from "@/types/clinic";
+import type { ListQueryParams, PaginatedResult } from "@/types/pagination";
 
 export const clinicService = {
   getMine() {
     return api.get<Clinic>("/clinics/me");
   },
 
-  list() {
-    return api.get<Clinic[]>("/clinics");
+  list(params?: ListQueryParams) {
+    return api.get<PaginatedResult<Clinic>>("/clinics", { params });
+  },
+
+  getById(id: string) {
+    return api.get<Clinic>(`/clinics/${id}`);
   },
 
   create(payload: CreateClinicPayload) {
@@ -24,5 +29,11 @@ export const clinicService = {
 
   deactivate(id: string) {
     return api.delete<Clinic>(`/clinics/${id}`);
+  },
+
+  deletePermanent(id: string) {
+    return api.delete<{ deleted: boolean; id: string }>(`/clinics/${id}`, {
+      params: { permanent: "true" },
+    });
   },
 };

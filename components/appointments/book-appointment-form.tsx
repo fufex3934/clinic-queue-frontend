@@ -13,12 +13,14 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PatientPicker } from "@/components/shared/patient-picker";
+import { useClinicContext } from "@/contexts/clinic-context";
 import {
-  CLINIC_TIME_SLOTS,
-  MAX_APPOINTMENTS_PER_SLOT,
-} from "@/lib/constants/time-slots";
+  getClinicSettings,
+  getTimeSlotsForClinic,
+} from "@/lib/clinic-settings";
 import { todayDateString } from "@/lib/date";
 import { getErrorMessage } from "@/lib/errors";
+import { notifyError, notifySuccess } from "@/lib/toast";
 import { PlatformClinicSelector } from "@/components/admin/platform-clinic-selector";
 import { useOperationalScope } from "@/hooks/use-operational-scope";
 import { appointmentService } from "@/services/appointmentService";
@@ -27,19 +29,27 @@ import type { Appointment, Patient } from "@/types";
 
 export function BookAppointmentForm() {
   const { scope, scopeKey, isScopeReady } = useOperationalScope();
+  const { activeClinic } = useClinicContext();
+  const { maxAppointmentsPerSlot } = getClinicSettings(activeClinic);
+  const timeSlots = getTimeSlotsForClinic(activeClinic);
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patientId, setPatientId] = useState("");
   const [date, setDate] = useState(todayDateString());
-  const [timeSlot, setTimeSlot] = useState(CLINIC_TIME_SLOTS[0] ?? "09:00");
+  const [timeSlot, setTimeSlot] = useState(timeSlots[0] ?? "09:00");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
   const loadPatients = useCallback(async () => {
     if (!isScopeReady) return;
-    const { data } = await patientService.list(scope);
-    setPatients(data);
+    const { data } = await patientService.list({
+      ...scope,
+      limit: 100,
+      sortBy: "name",
+      sortOrder: "asc",
+    });
+    setPatients(data.items);
   }, [scope, scopeKey, isScopeReady]);
 
   const loadAppointments = useCallback(async (selectedDate: string) => {
@@ -58,7 +68,7 @@ export function BookAppointmentForm() {
 
   const slotCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    for (const slot of CLINIC_TIME_SLOTS) {
+    for (const slot of timeSlots) {
       counts[slot] = 0;
     }
     for (const apt of appointments) {
@@ -71,7 +81,13 @@ export function BookAppointmentForm() {
       }
     }
     return counts;
-  }, [appointments]);
+  }, [appointments, timeSlots]);
+
+  useEffect(() => {
+    if (timeSlots.length && !timeSlots.includes(timeSlot)) {
+      setTimeSlot(timeSlots[0]);
+    }
+  }, [timeSlots, timeSlot]);
 
   const handleBook = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -83,8 +99,13 @@ export function BookAppointmentForm() {
       await appointmentService.book({ patientId, date, timeSlot }, scope);
       setSuccess(`Booked ${timeSlot} on ${date}`);
       await loadAppointments(date);
+      notifySuccess(
+        "Appointment booked",
+        `Visit scheduled for ${date} at ${timeSlot}.`,
+      );
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to book appointment"));
+      notifyError(err, "Could not book appointment");
     } finally {
       setLoading(false);
     }
@@ -100,7 +121,7 @@ export function BookAppointmentForm() {
             Book appointment
           </CardTitle>
           <CardDescription>
-            Max {MAX_APPOINTMENTS_PER_SLOT} patients per slot per day
+            Max {maxAppointmentsPerSlot} patients per slot per day
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -129,12 +150,12 @@ export function BookAppointmentForm() {
                 value={timeSlot}
                 onChange={(e) => setTimeSlot(e.target.value)}
               >
-                {CLINIC_TIME_SLOTS.map((slot) => {
+                {timeSlots.map((slot) => {
                   const count = slotCounts[slot] ?? 0;
-                  const full = count >= MAX_APPOINTMENTS_PER_SLOT;
+                  const full = count >= maxAppointmentsPerSlot;
                   return (
                     <option key={slot} value={slot} disabled={full}>
-                      {slot} ({count}/{MAX_APPOINTMENTS_PER_SLOT})
+                      {slot} ({count}/{maxAppointmentsPerSlot})
                       {full ? " — FULL" : ""}
                     </option>
                   );

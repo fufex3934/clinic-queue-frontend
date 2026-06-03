@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import Link from "next/link";
-import { Pencil, Plus, RefreshCw, Search, UserPlus } from "lucide-react";
+import { Pencil, Plus, RefreshCw, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -24,55 +24,60 @@ import {
 import { ErrorAlert } from "@/components/shared/error-alert";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PlatformClinicSelector } from "@/components/admin/platform-clinic-selector";
+import { ListDataToolbar } from "@/components/shared/list-data-toolbar";
 import { useAuth } from "@/contexts/auth-provider";
-import { useDebouncedValue } from "@/hooks/use-debounced-value";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { useOperationalScope } from "@/hooks/use-operational-scope";
 import { getErrorMessage } from "@/lib/errors";
+import { notifyError, notifySuccess } from "@/lib/toast";
 import { canAccessFeature } from "@/lib/permissions";
 import { patientService } from "@/services/patientService";
 import type { Patient } from "@/types";
+import type { ListQueryParams } from "@/types/pagination";
 
 export function PatientManagement() {
   const { user } = useAuth();
   const { scope, scopeKey, isScopeReady } = useOperationalScope();
   const canUseQueue = canAccessFeature(user?.role, "queue");
   const canBookAppointments = canAccessFeature(user?.role, "appointmentsBook");
-  const [patients, setPatients] = useState<Patient[]>([]);
-  const [search, setSearch] = useState("");
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
-  const debouncedSearch = useDebouncedValue(search, 400);
 
-  const loadPatients = useCallback(async () => {
-    if (!isScopeReady) {
-      setLoading(false);
-      return;
-    }
-    setError(null);
-    setLoading(true);
-    try {
-      const q = debouncedSearch.trim();
-      const { data } = await patientService.list({
-        ...scope,
-        search: q || undefined,
-      });
-      setPatients(data);
-    } catch (err: unknown) {
-      setError(getErrorMessage(err, "Failed to load patients"));
-    } finally {
-      setLoading(false);
-    }
-  }, [scope, scopeKey, debouncedSearch, isScopeReady]);
+  const fetchPatients = useCallback(
+    (params: ListQueryParams) =>
+      patientService.list({ ...scope, ...params }),
+    [scope, scopeKey],
+  );
 
-  useEffect(() => {
-    void loadPatients();
-  }, [loadPatients, isScopeReady]);
+  const {
+    items: patients,
+    total,
+    page,
+    limit,
+    totalPages,
+    search,
+    sortBy,
+    sortOrder,
+    loading,
+    error,
+    setSearch,
+    setSortBy,
+    setSortOrder,
+    setPage,
+    setLimit,
+    reload,
+  } = usePaginatedList<Patient>({
+    fetcher: fetchPatients,
+    enabled: isScopeReady,
+    defaultSortBy: "createdAt",
+    defaultSortOrder: "desc",
+    resetDeps: [scopeKey],
+  });
 
   const startEdit = (patient: Patient) => {
     setEditingId(patient._id);
@@ -82,7 +87,7 @@ export function PatientManagement() {
 
   const handleUpdate = async (patientId: string) => {
     setSaving(true);
-    setError(null);
+    setFormError(null);
     try {
       await patientService.update(
         patientId,
@@ -90,9 +95,11 @@ export function PatientManagement() {
         scope,
       );
       setEditingId(null);
-      await loadPatients();
+      await reload();
+      notifySuccess("Patient updated", "Contact details were saved.");
     } catch (err: unknown) {
-      setError(getErrorMessage(err, "Failed to update patient"));
+      setFormError(getErrorMessage(err, "Failed to update patient"));
+      notifyError(err, "Could not update patient");
     } finally {
       setSaving(false);
     }
@@ -101,7 +108,7 @@ export function PatientManagement() {
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    setError(null);
+    setFormError(null);
     try {
       await patientService.create(
         { name: name.trim(), phone: phone.trim() },
@@ -109,9 +116,14 @@ export function PatientManagement() {
       );
       setName("");
       setPhone("");
-      await loadPatients();
+      await reload();
+      notifySuccess(
+        "Patient registered",
+        `${name.trim()} was added to your clinic records.`,
+      );
     } catch (err: unknown) {
-      setError(getErrorMessage(err, "Failed to create patient"));
+      setFormError(getErrorMessage(err, "Failed to create patient"));
+      notifyError(err, "Could not register patient");
     } finally {
       setSaving(false);
     }
@@ -125,14 +137,18 @@ export function PatientManagement() {
         <p className="text-sm text-muted-foreground">
           Register walk-in patients for your clinic
         </p>
-        <Button variant="outline" size="sm" onClick={loadPatients} disabled={loading}>
+        <Button variant="outline" size="sm" onClick={() => void reload()} disabled={loading}>
           <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
           Refresh
         </Button>
       </div>
 
-      {error && (
-        <ErrorAlert title="Error" message={error} onRetry={loadPatients} />
+      {(error || formError) && (
+        <ErrorAlert
+          title="Error"
+          message={error ?? formError ?? ""}
+          onRetry={() => void reload()}
+        />
       )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,340px)_1fr]">
@@ -177,19 +193,30 @@ export function PatientManagement() {
           <CardHeader>
             <CardTitle className="text-base">Patient directory</CardTitle>
             <CardDescription>
-              {patients.length} patient{patients.length === 1 ? "" : "s"}
+              {total} patient{total === 1 ? "" : "s"} in your clinic
             </CardDescription>
-            <div className="relative pt-2">
-              <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                className="pl-9"
-                placeholder="Search name or phone…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-              />
-            </div>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <ListDataToolbar
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Search by name or phone…"
+              sortBy={sortBy}
+              sortOptions={[
+                { value: "createdAt", label: "Date added" },
+                { value: "name", label: "Name" },
+                { value: "phone", label: "Phone" },
+              ]}
+              onSortByChange={setSortBy}
+              sortOrder={sortOrder}
+              onSortOrderChange={setSortOrder}
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              onPageChange={setPage}
+              limit={limit}
+              onLimitChange={setLimit}
+            />
             {loading ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : patients.length === 0 ? (

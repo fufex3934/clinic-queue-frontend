@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell, LogOut, Menu, UserCircle } from "lucide-react";
+import { LogOut, Menu, UserCircle } from "lucide-react";
+import { NotificationBell } from "@/components/layout/notification-bell";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -82,9 +83,7 @@ export function DashboardHeader() {
           {user?.name}{" "}
           <span className="capitalize text-foreground/70">({user?.role})</span>
         </span>
-        <Button variant="ghost" size="icon" aria-label="Notifications">
-          <Bell className="size-4" />
-        </Button>
+        <NotificationBell />
         <Button variant="ghost" size="icon" aria-label="Profile">
           <UserCircle className="size-5" />
         </Button>

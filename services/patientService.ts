@@ -1,11 +1,12 @@
 import api from "@/lib/api";
 import type { CreatePatientPayload, Patient } from "@/types";
+import type { ListQueryParams, PaginatedResult } from "@/types/pagination";
 
-type Scope = { clinicId?: string; search?: string };
+type Scope = { clinicId?: string } & ListQueryParams;
 
 export const patientService = {
   list(scope?: Scope) {
-    return api.get<Patient[]>("/patients", { params: scope });
+    return api.get<PaginatedResult<Patient>>("/patients", { params: scope });
   },
 
   getById(id: string, scope?: { clinicId?: string }) {

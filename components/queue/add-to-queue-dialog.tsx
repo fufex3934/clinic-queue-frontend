@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/sheet";
 import { PatientPicker } from "@/components/shared/patient-picker";
 import { getErrorMessage } from "@/lib/errors";
+import { notifyError, notifySuccess } from "@/lib/toast";
 import { patientService } from "@/services/patientService";
 import { queueService } from "@/services/queueService";
 import type { Patient } from "@/types";
@@ -36,7 +37,9 @@ export function AddToQueueDialog({
 
   useEffect(() => {
     if (!open) return;
-    void patientService.list(scope).then(({ data }) => setPatients(data));
+    void patientService
+      .list({ ...scope, limit: 50, sortBy: "name", sortOrder: "asc" })
+      .then(({ data }) => setPatients(data.items));
   }, [open, scope]);
 
   const handleAdd = async () => {
@@ -48,8 +51,13 @@ export function AddToQueueDialog({
       setOpen(false);
       setPatientId("");
       onAdded();
+      notifySuccess(
+        "Added to queue",
+        "The patient received a token and appears in the waiting list.",
+      );
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to add to queue"));
+      notifyError(err, "Could not add patient to queue");
     } finally {
       setLoading(false);
     }

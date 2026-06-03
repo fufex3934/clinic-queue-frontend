@@ -6,11 +6,8 @@ export const ROLE_LABELS: Record<UserRole, string> = {
   platform_admin: "Platform admin",
 };
 
-/** Roles clinic admins may assign when creating staff. */
-export const CLINIC_STAFF_ROLES: UserRole[] = ["admin", "receptionist"];
+/** Roles clinic admins may create or assign (receptionists only). */
+export const CLINIC_MANAGED_STAFF_ROLES: UserRole[] = ["receptionist"];
 
-/** Roles platform admins may assign (excludes creating more platform admins by default in UI). */
-export const PLATFORM_ASSIGNABLE_ROLES: UserRole[] = [
-  "admin",
-  "receptionist",
-];
+/** Roles platform operators may create for a tenant (not platform_admin). */
+export const PLATFORM_CLINIC_ACCOUNT_ROLES: UserRole[] = ["admin", "receptionist"];

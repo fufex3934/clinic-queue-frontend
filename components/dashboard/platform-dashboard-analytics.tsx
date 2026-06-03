@@ -21,7 +21,6 @@ import {
   Legend,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -40,6 +39,7 @@ import { ErrorAlert } from "@/components/shared/error-alert";
 import {
   AnalyticsSkeleton,
   ChartCard,
+  ChartPlot,
   EmptyChart,
   KpiCard,
 } from "@/components/dashboard/dashboard-chart-parts";
@@ -204,7 +204,7 @@ export function PlatformDashboardAnalytics() {
           description="All clinics — tokens issued vs completed"
         >
           {hasQueueTrend ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartPlot>
               <AreaChart data={stats.queueLast7Days}>
                 <defs>
                   <linearGradient id="platformQueueTotal" x1="0" y1="0" x2="0" y2="1">
@@ -224,7 +224,7 @@ export function PlatformDashboardAnalytics() {
                 <Area type="monotone" dataKey="total" name="Total" stroke={CHART_COLORS.primary} fill="url(#platformQueueTotal)" strokeWidth={2} />
                 <Area type="monotone" dataKey="completed" name="Completed" stroke={SERIES_PALETTE[2]} fill="url(#platformQueueDone)" strokeWidth={2} />
               </AreaChart>
-            </ResponsiveContainer>
+            </ChartPlot>
           ) : (
             <EmptyChart message="No queue activity across clinics" />
           )}
@@ -235,7 +235,7 @@ export function PlatformDashboardAnalytics() {
           description="All clinics — bookings, arrivals, cancellations"
         >
           {hasApptTrend ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartPlot>
               <BarChart data={stats.appointmentsLast7Days}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} vertical={false} />
                 <XAxis dataKey="label" tick={chartAxisTick} axisLine={false} tickLine={false} />
@@ -246,7 +246,7 @@ export function PlatformDashboardAnalytics() {
                 <Bar dataKey="arrived" name="Arrived" fill={SERIES_PALETTE[2]} radius={[4, 4, 0, 0]} />
                 <Bar dataKey="cancelled" name="Cancelled" fill={SERIES_PALETTE[4]} radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartPlot>
           ) : (
             <EmptyChart message="No appointments across clinics" />
           )}
@@ -259,7 +259,7 @@ export function PlatformDashboardAnalytics() {
         className="lg:col-span-2"
       >
         {hasClinicGrowth ? (
-          <ResponsiveContainer width="100%" height="100%">
+          <ChartPlot>
             <AreaChart data={stats.clinicsGrowth}>
               <defs>
                 <linearGradient id="clinicGrowthFill" x1="0" y1="0" x2="0" y2="1">
@@ -273,7 +273,7 @@ export function PlatformDashboardAnalytics() {
               <Tooltip contentStyle={chartTooltipStyle.contentStyle} />
               <Area type="monotone" dataKey="total" name="New clinics" stroke={CHART_COLORS.primary} fill="url(#clinicGrowthFill)" strokeWidth={2} />
             </AreaChart>
-          </ResponsiveContainer>
+          </ChartPlot>
         ) : (
           <EmptyChart message="No new clinics in the last 7 days" />
         )}
@@ -282,7 +282,7 @@ export function PlatformDashboardAnalytics() {
       <div className="grid gap-4 lg:grid-cols-2">
         <ChartCard title="Patients per clinic" description="Total registered patients">
           {hasClinics ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartPlot>
               <BarChart data={patientsPerClinic}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} vertical={false} />
                 <XAxis dataKey="name" tick={chartAxisTick} axisLine={false} tickLine={false} />
@@ -290,7 +290,7 @@ export function PlatformDashboardAnalytics() {
                 <Tooltip contentStyle={chartTooltipStyle.contentStyle} labelFormatter={(_, p) => p?.[0]?.payload?.fullName ?? ""} />
                 <Bar dataKey="patients" name="Patients" fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartPlot>
           ) : (
             <EmptyChart message="No clinics yet" />
           )}
@@ -298,7 +298,7 @@ export function PlatformDashboardAnalytics() {
 
         <ChartCard title="Appointments per clinic" description="Bookings today by tenant">
           {hasClinics ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartPlot>
               <BarChart data={appointmentsPerClinic}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} vertical={false} />
                 <XAxis dataKey="name" tick={chartAxisTick} axisLine={false} tickLine={false} />
@@ -306,7 +306,7 @@ export function PlatformDashboardAnalytics() {
                 <Tooltip contentStyle={chartTooltipStyle.contentStyle} labelFormatter={(_, p) => p?.[0]?.payload?.fullName ?? ""} />
                 <Bar dataKey="appointments" name="Appointments" fill={SERIES_PALETTE[2]} radius={[4, 4, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
+            </ChartPlot>
           ) : (
             <EmptyChart message="No appointments today" />
           )}
@@ -319,7 +319,7 @@ export function PlatformDashboardAnalytics() {
         className="lg:col-span-2"
       >
         {hasClinics ? (
-          <ResponsiveContainer width="100%" height="100%">
+          <ChartPlot>
             <BarChart data={clinicBarData} margin={{ top: 8, right: 8, left: 0, bottom: 24 }}>
               <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} vertical={false} />
               <XAxis dataKey="name" tick={chartAxisTick} axisLine={false} tickLine={false} />
@@ -334,7 +334,7 @@ export function PlatformDashboardAnalytics() {
               <Bar dataKey="waiting" name="Queue waiting" fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} />
               <Bar dataKey="appointments" name="Appointments" fill={SERIES_PALETTE[2]} radius={[4, 4, 0, 0]} />
             </BarChart>
-          </ResponsiveContainer>
+          </ChartPlot>
         ) : (
           <EmptyChart message="No clinics registered yet" />
         )}
@@ -343,7 +343,7 @@ export function PlatformDashboardAnalytics() {
       <div className="grid gap-4 md:grid-cols-2">
         <ChartCard title="Queue status today" description="Platform-wide walk-in tokens">
           {queuePieData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartPlot>
               <PieChart>
                 <Pie data={queuePieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={56} outerRadius={88} paddingAngle={3}>
                   {queuePieData.map((_, i) => (
@@ -353,7 +353,7 @@ export function PlatformDashboardAnalytics() {
                 <Tooltip contentStyle={chartTooltipStyle.contentStyle} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
               </PieChart>
-            </ResponsiveContainer>
+            </ChartPlot>
           ) : (
             <EmptyChart message="No queue entries today" />
           )}
@@ -361,7 +361,7 @@ export function PlatformDashboardAnalytics() {
 
         <ChartCard title="Appointment status today" description="Platform-wide booking states">
           {appointmentPieData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
+            <ChartPlot>
               <PieChart>
                 <Pie data={appointmentPieData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={56} outerRadius={88} paddingAngle={2}>
                   {appointmentPieData.map((_, i) => (
@@ -371,7 +371,7 @@ export function PlatformDashboardAnalytics() {
                 <Tooltip contentStyle={chartTooltipStyle.contentStyle} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
               </PieChart>
-            </ResponsiveContainer>
+            </ChartPlot>
           ) : (
             <EmptyChart message="No appointments today" />
           )}

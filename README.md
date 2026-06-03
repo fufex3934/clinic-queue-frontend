@@ -1,36 +1,48 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Clinic Queue — Frontend
 
-## Getting Started
+Next.js 16 App Router UI for the clinic queue SaaS. Dev server: **port 3001** (`pnpm dev`).
 
-First, run the development server:
+## Setup
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+cp .env.example .env.local
+# Set NEXT_PUBLIC_API_URL=http://localhost:4000
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Architecture
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Auth:** httpOnly cookie + localStorage token for API/WebSocket; BFF at `/api/backend/*`
+- **Active clinic:** `ClinicContext` — single source for platform admin operational scope
+- **Clinic settings:** `activeClinic` drives booking slots and per-slot capacity (from API, not hardcoded)
+- **Realtime:** Socket.IO `/realtime` — queue hooks + `useRealtimeAppointments`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Key routes
 
-## Learn More
+| Path | Role |
+|------|------|
+| `/dashboard` | Overview & analytics |
+| `/dashboard/patients` | Patient registry |
+| `/dashboard/queue` | Queue management |
+| `/dashboard/appointments` | Schedule by date |
+| `/dashboard/appointments/book` | Book appointment |
+| `/dashboard/admin` | Clinic & staff administration |
+| `/dashboard/billing` | Clinic admin billing |
+| `/dashboard/admin/payments` | Platform payment approval + MRR |
+| `/dashboard/admin/users` | Platform-wide user directory |
 
-To learn more about Next.js, take a look at the following resources:
+## Testing
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm test:e2e          # Playwright smoke tests (starts dev server if needed)
+pnpm exec playwright install chromium  # first-time browser install
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Roles
 
-## Deploy on Vercel
+- `admin` — clinic administrator
+- `receptionist` — front desk
+- `platform_admin` — multi-tenant operator
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+See `lib/permissions.ts` for nav and route guards.

@@ -18,7 +18,7 @@ const tiers = [
   {
     name: "Premium",
     price: "3,500 ETB / month",
-    features: ["SMS notifications", "Full features"],
+    features: ["Email alerts", "Full features"],
   },
 ];
 

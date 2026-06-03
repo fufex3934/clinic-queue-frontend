@@ -19,6 +19,6 @@ export function useOperationalScope() {
     operationalClinicId,
     isPlatformView,
     isScopeReady,
-    isAdmin: user?.role === "admin" || user?.role === "platform_admin",
+    isAdmin: user?.role === "admin",
   };
 }

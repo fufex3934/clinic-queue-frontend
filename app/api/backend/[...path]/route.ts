@@ -28,13 +28,21 @@ async function proxyRequest(
 
   const method = request.method;
   const hasBody = method !== "GET" && method !== "HEAD";
+  const isMultipart = contentType?.toLowerCase().includes("multipart/form-data");
+
+  let body: ArrayBuffer | string | undefined;
+  if (hasBody) {
+    body = isMultipart
+      ? await request.arrayBuffer()
+      : await request.text();
+  }
 
   let backendRes: Response;
   try {
     backendRes = await fetch(targetUrl, {
       method,
       headers,
-      body: hasBody ? await request.text() : undefined,
+      body,
       cache: "no-store",
     });
   } catch {

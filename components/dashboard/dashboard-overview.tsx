@@ -66,7 +66,7 @@ const welcomeCopy: Record<UserRole, string> = {
   admin:
     "Welcome. Manage daily operations or open administration for clinic and staff settings.",
   platform_admin:
-    "Welcome. This overview shows platform-wide metrics across all clinics. Use Administration to manage tenants and staff.",
+    "Welcome. Manage clinic tenants under Administration. Patients, queue, and appointments are for clinic staff only.",
 };
 
 export function DashboardOverview() {
@@ -83,7 +83,7 @@ export function DashboardOverview() {
         {role ? welcomeCopy[role] : "Loading…"}
       </p>
 
-      <PlatformClinicSelector />
+      {role !== "platform_admin" && <PlatformClinicSelector />}
 
       {canAccessFeature(role, "overview") && <DashboardStatsPanel />}
 

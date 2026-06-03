@@ -1,14 +1,13 @@
 import type { UserRole } from "@/types/auth";
 
-/** Day-to-day clinic operations (single clinic or platform clinic view). */
-export const OPERATIONAL_ROLES: UserRole[] = [
-  "admin",
-  "receptionist",
-  "platform_admin",
-];
+/** Day-to-day clinic operations (single clinic tenant only). */
+export const CLINIC_OPERATIONAL_ROLES: UserRole[] = ["admin", "receptionist"];
 
-/** Clinic / platform staff management. */
-export const ADMINISTRATION_ROLES: UserRole[] = ["admin", "platform_admin"];
+/** Clinic tenant profile + staff (clinic admin). */
+export const CLINIC_ADMINISTRATION_ROLES: UserRole[] = ["admin"];
+
+/** Platform operator — tenants, billing approvals, global user directory. */
+export const PLATFORM_OPERATOR_ROLES: UserRole[] = ["platform_admin"];
 
 /** Overview dashboard — clinic stats or platform-wide stats. */
 export const OVERVIEW_ROLES: UserRole[] = [
@@ -23,19 +22,28 @@ export type AppFeature =
   | "queue"
   | "appointments"
   | "appointmentsBook"
-  | "administration";
+  | "administration"
+  | "billing"
+  | "paymentsAdmin"
+  | "platformUsers";
 
 export const FEATURE_ACCESS: Record<AppFeature, readonly UserRole[]> = {
   overview: OVERVIEW_ROLES,
-  patients: OPERATIONAL_ROLES,
-  queue: OPERATIONAL_ROLES,
-  appointments: OPERATIONAL_ROLES,
-  appointmentsBook: OPERATIONAL_ROLES,
-  administration: ADMINISTRATION_ROLES,
+  patients: CLINIC_OPERATIONAL_ROLES,
+  queue: CLINIC_OPERATIONAL_ROLES,
+  appointments: CLINIC_OPERATIONAL_ROLES,
+  appointmentsBook: CLINIC_OPERATIONAL_ROLES,
+  administration: [...CLINIC_ADMINISTRATION_ROLES, ...PLATFORM_OPERATOR_ROLES],
+  billing: ["admin"],
+  paymentsAdmin: PLATFORM_OPERATOR_ROLES,
+  platformUsers: PLATFORM_OPERATOR_ROLES,
 };
 
 /** Longest prefix first — used by getFeatureForPath. */
 const ROUTE_FEATURES: { prefix: string; feature: AppFeature }[] = [
+  { prefix: "/dashboard/admin/payments", feature: "paymentsAdmin" },
+  { prefix: "/dashboard/admin/users", feature: "platformUsers" },
+  { prefix: "/dashboard/billing", feature: "billing" },
   { prefix: "/dashboard/admin", feature: "administration" },
   { prefix: "/dashboard/appointments/book", feature: "appointmentsBook" },
   { prefix: "/dashboard/appointments", feature: "appointments" },
@@ -63,6 +71,17 @@ export const NAV_LINKS: {
     label: "Administration",
     feature: "administration",
   },
+  { href: "/dashboard/billing", label: "Billing", feature: "billing" },
+  {
+    href: "/dashboard/admin/payments",
+    label: "Payments",
+    feature: "paymentsAdmin",
+  },
+  {
+    href: "/dashboard/admin/users",
+    label: "All users",
+    feature: "platformUsers",
+  },
   {
     href: "/dashboard/appointments/book",
     label: "Book Appointment",
@@ -76,7 +95,10 @@ export const NAV_GROUPS: { label: string; features: AppFeature[] }[] = [
     label: "Operations",
     features: ["patients", "queue", "appointments", "appointmentsBook"],
   },
-  { label: "Administration", features: ["administration"] },
+  {
+    label: "Administration",
+    features: ["administration", "billing", "paymentsAdmin", "platformUsers"],
+  },
 ];
 
 export function canAccessFeature(
@@ -109,7 +131,7 @@ export function getDefaultHomePath(role: UserRole): string {
     case "receptionist":
       return "/dashboard/patients";
     case "platform_admin":
-      return "/dashboard";
+      return "/dashboard/admin";
     default:
       return "/dashboard";
   }

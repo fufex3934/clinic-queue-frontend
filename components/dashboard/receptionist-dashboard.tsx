@@ -60,14 +60,14 @@ export function ReceptionistDashboard() {
       const [queueRes, statsRes, patientsRes, apptRes] = await Promise.all([
         queueService.getToday(scope),
         statsService.getDashboard(),
-        patientService.list(scope),
+        patientService.list({ ...scope, limit: 100, page: 1 }),
         appointmentService.getByDate(todayDateString(), scope),
       ]);
 
       setQueue(queueRes.data);
 
       const today = todayDateString();
-      const patientsToday = patientsRes.data.filter((p) =>
+      const patientsToday = patientsRes.data.items.filter((p) =>
         p.createdAt?.startsWith(today),
       ).length;
 

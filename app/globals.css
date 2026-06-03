@@ -128,3 +128,24 @@
     @apply font-sans;
   }
 }
+
+/* Sonner — light clinic-style toasts (no dark/richColors backgrounds) */
+[data-sonner-toaster] {
+  --normal-bg: var(--card);
+  --normal-border: var(--border);
+  --normal-text: var(--foreground);
+  font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+[data-sonner-toaster] [data-sonner-toast] {
+  pointer-events: auto;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-close-button] {
+  transform: none;
+  opacity: 0.7;
+}
+
+[data-sonner-toaster] [data-sonner-toast] [data-close-button]:hover {
+  opacity: 1;
+}

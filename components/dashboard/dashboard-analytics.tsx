@@ -43,6 +43,7 @@ import {
 } from "@/lib/chart-theme";
 import { canAccessFeature } from "@/lib/permissions";
 import { getErrorMessage } from "@/lib/errors";
+import { paymentService } from "@/services/paymentService";
 import { statsService } from "@/services/statsService";
 import {
   isClinicDashboardStats,
@@ -53,6 +54,7 @@ export function DashboardAnalytics() {
   const { user } = useAuth();
   const role = user?.role;
   const [stats, setStats] = useState<ClinicDashboardStats | null>(null);
+  const [subscriptionActive, setSubscriptionActive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,6 +66,14 @@ export function DashboardAnalytics() {
     setError(null);
     setLoading(true);
     try {
+      if (role === "admin") {
+        try {
+          const billing = await paymentService.getBilling();
+          setSubscriptionActive(billing.data.subscription.isActive);
+        } catch {
+          setSubscriptionActive(false);
+        }
+      }
       const { data } = await statsService.getDashboard();
       if (!isClinicDashboardStats(data)) {
         setError("Expected clinic-scoped statistics");
@@ -75,7 +85,7 @@ export function DashboardAnalytics() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [role]);
 
   useEffect(() => {
     void load();
@@ -153,12 +163,26 @@ export function DashboardAnalytics() {
           </>
         )}
         {showAppointments && (
-          <KpiCard
-            label="Appointments today"
-            value={kpis.appointmentsToday}
-            hint={`${kpis.appointmentsArrivedToday} arrived · ${kpis.appointmentsScheduledToday} upcoming`}
-            icon={CalendarCheck}
-          />
+          <>
+            {role === "admin" && (
+              <KpiCard
+                label="Subscription"
+                value={subscriptionActive ? "Active" : "Inactive"}
+                icon={CheckCircle2}
+                hint={
+                  subscriptionActive
+                    ? "Billing current"
+                    : "Renew in Billing"
+                }
+              />
+            )}
+            <KpiCard
+              label="Appointments today"
+              value={kpis.appointmentsToday}
+              hint={`${kpis.appointmentsArrivedToday} arrived · ${kpis.appointmentsScheduledToday} upcoming`}
+              icon={CalendarCheck}
+            />
+          </>
         )}
         {showQueue && (
           <>

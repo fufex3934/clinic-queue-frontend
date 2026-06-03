@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import type { QueueStatus } from "@/types";
 
 const labels: Record<QueueStatus, string> = {
-  waiting: "Waiting",
+  waiting: "In queue",
   serving: "Serving",
   done: "Done",
   skipped: "Skipped",

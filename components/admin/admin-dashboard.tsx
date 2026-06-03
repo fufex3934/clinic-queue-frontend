@@ -1,14 +1,18 @@
 "use client";
 
-import { useState } from "react";
 import { useAuth } from "@/contexts/auth-provider";
+import { useClinicContext } from "@/contexts/clinic-context";
 import { ClinicAdministration } from "@/components/admin/clinic-administration";
 import { StaffManagement } from "@/components/admin/staff-management";
 import { Separator } from "@/components/ui/separator";
 
 export function AdminDashboard() {
   const { user } = useAuth();
-  const [staffClinicId, setStaffClinicId] = useState(user?.clinicId ?? "");
+  const { operationalClinicId, setOperationalClinicId, isPlatformView } =
+    useClinicContext();
+  const staffClinicId = isPlatformView
+    ? operationalClinicId ?? ""
+    : user?.clinicId ?? "";
 
   if (!user) {
     return null;
@@ -23,22 +27,26 @@ export function AdminDashboard() {
         <h1 className="text-2xl font-semibold tracking-tight">Administration</h1>
         <p className="text-sm text-muted-foreground">
           {isPlatformAdmin
-            ? "Manage clinic tenants and staff accounts across the platform."
-            : "Manage your clinic profile and staff who can use the queue system."}
+            ? "Create, edit, deactivate, or delete clinic tenants and manage clinic admin accounts. Payments and All users are under separate menu items."
+            : "Manage your clinic profile and receptionist staff for day-to-day operations."}
         </p>
       </header>
 
       <ClinicAdministration
         isPlatformAdmin={isPlatformAdmin}
         userClinicId={user.clinicId}
-        onClinicChange={setStaffClinicId}
+        onClinicChange={(id) => {
+          if (isPlatformView) setOperationalClinicId(id);
+        }}
       />
 
       {activeClinicId && (
         <>
           <Separator />
           <section className="space-y-4">
-            <h2 className="text-lg font-medium">Staff accounts</h2>
+            <h2 className="text-lg font-medium">
+              {isPlatformAdmin ? "Clinic accounts" : "Receptionist staff"}
+            </h2>
             <StaffManagement
               clinicId={activeClinicId}
               isPlatformAdmin={isPlatformAdmin}

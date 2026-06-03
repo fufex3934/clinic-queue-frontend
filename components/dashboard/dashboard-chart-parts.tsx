@@ -10,6 +10,18 @@ import {
 } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { ResponsiveContainer } from "recharts";
+
+/** Fixed plot height so Recharts never measures a 0×0 parent. */
+export const CHART_PLOT_HEIGHT = 240;
+
+export function ChartPlot({ children }: { children: React.ReactElement }) {
+  return (
+    <ResponsiveContainer width="100%" height={CHART_PLOT_HEIGHT} minWidth={0}>
+      {children}
+    </ResponsiveContainer>
+  );
+}
 
 export function KpiCard({
   label,

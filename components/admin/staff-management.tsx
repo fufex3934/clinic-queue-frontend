@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { RefreshCw, UserPlus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,13 +23,18 @@ import {
 } from "@/components/ui/table";
 import { ErrorAlert } from "@/components/shared/error-alert";
 import { EmptyState } from "@/components/shared/empty-state";
+import { ListDataToolbar } from "@/components/shared/list-data-toolbar";
+import { usePaginatedList } from "@/hooks/use-paginated-list";
+import { useConfirm } from "@/contexts/confirm-dialog-provider";
 import { getErrorMessage } from "@/lib/errors";
+import { notifyError, notifySuccess, notifyValidation } from "@/lib/toast";
 import {
-  CLINIC_STAFF_ROLES,
-  PLATFORM_ASSIGNABLE_ROLES,
+  CLINIC_MANAGED_STAFF_ROLES,
+  PLATFORM_CLINIC_ACCOUNT_ROLES,
   ROLE_LABELS,
 } from "@/lib/roles";
 import { userService } from "@/services/userService";
+import type { ListQueryParams } from "@/types/pagination";
 import type { UserRole } from "@/types/auth";
 import type { StaffUser } from "@/types/user";
 
@@ -45,48 +49,69 @@ export function StaffManagement({
   isPlatformAdmin,
   currentUserId,
 }: StaffManagementProps) {
-  const [staff, setStaff] = useState<StaffUser[]>([]);
-  const [loading, setLoading] = useState(true);
+  const confirm = useConfirm();
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<UserRole>("receptionist");
+  const [role, setRole] = useState<UserRole>(
+    isPlatformAdmin ? "admin" : "receptionist",
+  );
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [resetPasswordId, setResetPasswordId] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState("");
 
   const assignableRoles = isPlatformAdmin
-    ? PLATFORM_ASSIGNABLE_ROLES
-    : CLINIC_STAFF_ROLES;
+    ? PLATFORM_CLINIC_ACCOUNT_ROLES
+    : CLINIC_MANAGED_STAFF_ROLES;
 
-  const loadStaff = useCallback(async () => {
-    setError(null);
-    setLoading(true);
-    try {
-      const { data } = await userService.list(clinicId);
-      setStaff(data);
-    } catch (err: unknown) {
-      setError(getErrorMessage(err, "Failed to load staff"));
-    } finally {
-      setLoading(false);
-    }
-  }, [clinicId]);
+  const canManageMember = (member: StaffUser) => {
+    if (member.role === "platform_admin") return false;
+    if (isPlatformAdmin) return true;
+    return member.role === "receptionist";
+  };
 
-  useEffect(() => {
-    void loadStaff();
-  }, [loadStaff]);
+  const fetchStaff = useCallback(
+    (params: ListQueryParams) => userService.list({ clinicId, ...params }),
+    [clinicId],
+  );
+
+  const {
+    items: staff,
+    total,
+    page,
+    limit,
+    totalPages,
+    search,
+    sortBy,
+    sortOrder,
+    loading,
+    error,
+    setSearch,
+    setSortBy,
+    setSortOrder,
+    setPage,
+    setLimit,
+    reload: loadStaff,
+  } = usePaginatedList<StaffUser>({
+    fetcher: fetchStaff,
+    enabled: Boolean(clinicId),
+    defaultSortBy: "name",
+    defaultSortOrder: "asc",
+    defaultLimit: 15,
+    resetDeps: [clinicId],
+  });
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim() && !phone.trim()) {
-      setError("Provide an email or phone number for the new account");
+      notifyValidation("Provide an email or phone number for the new account.");
       return;
     }
     setSaving(true);
-    setError(null);
+    setFormError(null);
     try {
       await userService.create({
         name: name.trim(),
@@ -100,10 +125,15 @@ export function StaffManagement({
       setEmail("");
       setPhone("");
       setPassword("");
-      setRole("receptionist");
+      setRole(isPlatformAdmin ? "admin" : "receptionist");
       await loadStaff();
+      notifySuccess(
+        "Staff account created",
+        `${name.trim() || "New user"} can sign in with the credentials you set.`,
+      );
     } catch (err: unknown) {
-      setError(getErrorMessage(err, "Failed to create staff account"));
+      setFormError(getErrorMessage(err, "Failed to create staff account"));
+      notifyError(err, "Could not create staff account");
     } finally {
       setSaving(false);
     }
@@ -111,30 +141,49 @@ export function StaffManagement({
 
   const handleResetPassword = async (memberId: string) => {
     if (newPassword.length < 8) {
-      setError("Password must be at least 8 characters");
+      notifyValidation("Password must be at least 8 characters.");
       return;
     }
     setUpdatingId(memberId);
-    setError(null);
+    setFormError(null);
     try {
       await userService.update(memberId, { password: newPassword });
       setResetPasswordId(null);
       setNewPassword("");
+      notifySuccess("Password reset", "The staff member can sign in with the new password.");
     } catch (err: unknown) {
-      setError(getErrorMessage(err, "Failed to reset password"));
+      setFormError(getErrorMessage(err, "Failed to reset password"));
+      notifyError(err, "Could not reset password");
     } finally {
       setUpdatingId(null);
     }
   };
 
   const handleToggleActive = async (member: StaffUser) => {
+    if (member.isActive) {
+      const ok = await confirm({
+        title: "Deactivate staff account?",
+        description: `${member.name} will not be able to sign in until you re-enable the account.`,
+        confirmLabel: "Deactivate",
+        cancelLabel: "Cancel",
+        variant: "destructive",
+      });
+      if (!ok) return;
+    }
     setUpdatingId(member.id);
-    setError(null);
+    setFormError(null);
     try {
       await userService.update(member.id, { isActive: !member.isActive });
       await loadStaff();
+      notifySuccess(
+        member.isActive ? "Account deactivated" : "Account activated",
+        member.isActive
+          ? `${member.name} can no longer sign in.`
+          : `${member.name} can sign in again.`,
+      );
     } catch (err: unknown) {
-      setError(getErrorMessage(err, "Failed to update account status"));
+      setFormError(getErrorMessage(err, "Failed to update account status"));
+      notifyError(err, "Could not update account status");
     } finally {
       setUpdatingId(null);
     }
@@ -143,12 +192,17 @@ export function StaffManagement({
   const handleRoleChange = async (member: StaffUser, newRole: UserRole) => {
     if (member.role === newRole) return;
     setUpdatingId(member.id);
-    setError(null);
+    setFormError(null);
     try {
       await userService.update(member.id, { role: newRole });
       await loadStaff();
+      notifySuccess(
+        "Role updated",
+        `${member.name} is now a ${ROLE_LABELS[newRole] ?? newRole}.`,
+      );
     } catch (err: unknown) {
-      setError(getErrorMessage(err, "Failed to update role"));
+      setFormError(getErrorMessage(err, "Failed to update role"));
+      notifyError(err, "Could not update role");
     } finally {
       setUpdatingId(null);
     }
@@ -156,18 +210,24 @@ export function StaffManagement({
 
   return (
     <div className="space-y-6">
-      {error && (
-        <ErrorAlert title="Error" message={error} onRetry={loadStaff} />
+      {(error || formError) && (
+        <ErrorAlert
+          title="Error"
+          message={error ?? formError ?? ""}
+          onRetry={() => void loadStaff()}
+        />
       )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Staff accounts for this clinic
+          {isPlatformAdmin
+            ? "Clinic admin and receptionist logins for the selected tenant (password reset and enable/disable)."
+            : "Receptionist accounts for your clinic. Other clinic admins are managed by the platform operator."}
         </p>
         <Button
           variant="outline"
           size="sm"
-          onClick={loadStaff}
+          onClick={() => void loadStaff()}
           disabled={loading}
         >
           <RefreshCw
@@ -185,7 +245,9 @@ export function StaffManagement({
               Add staff member
             </CardTitle>
             <CardDescription>
-              Creates a login for queue and patient workflows
+              {isPlatformAdmin
+                ? "Create a clinic admin or receptionist for this tenant"
+                : "Create a receptionist for queue and patient workflows"}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -257,10 +319,30 @@ export function StaffManagement({
           <CardHeader>
             <CardTitle className="text-base">Team directory</CardTitle>
             <CardDescription>
-              {staff.length} account{staff.length === 1 ? "" : "s"}
+              {total} account{total === 1 ? "" : "s"}
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <ListDataToolbar
+              search={search}
+              onSearchChange={setSearch}
+              searchPlaceholder="Search name, email, or phone…"
+              sortBy={sortBy}
+              sortOptions={[
+                { value: "name", label: "Name" },
+                { value: "role", label: "Role" },
+                { value: "createdAt", label: "Date added" },
+              ]}
+              onSortByChange={setSortBy}
+              sortOrder={sortOrder}
+              onSortOrderChange={setSortOrder}
+              page={page}
+              totalPages={totalPages}
+              total={total}
+              onPageChange={setPage}
+              limit={limit}
+              onLimitChange={setLimit}
+            />
             {loading ? (
               <p className="text-sm text-muted-foreground">Loading…</p>
             ) : staff.length === 0 ? (
@@ -283,18 +365,16 @@ export function StaffManagement({
                 <TableBody>
                   {staff.map((member) => {
                     const isSelf = member.id === currentUserId;
+                    const manageable = canManageMember(member);
                     const canEditRole =
-                      !isSelf && member.role !== "platform_admin";
+                      manageable && !isSelf && isPlatformAdmin;
 
                     return (
                       <TableRow key={member.id}>
                         <TableCell className="font-medium">
-                          <Link
-                            href={`/dashboard/admin/users/${member.id}`}
-                            className="text-primary hover:underline"
-                          >
+                          <span>
                             {member.name}
-                          </Link>
+                          </span>
                           {isSelf && (
                             <span className="ml-2 text-xs text-muted-foreground">
                               (you)
@@ -330,7 +410,7 @@ export function StaffManagement({
                           )}
                         </TableCell>
                         <TableCell>
-                          {!isSelf && member.role !== "platform_admin" ? (
+                          {manageable && !isSelf ? (
                             <Button
                               type="button"
                               size="sm"
@@ -347,7 +427,7 @@ export function StaffManagement({
                           )}
                         </TableCell>
                         <TableCell className="text-right">
-                          {!isSelf && member.role !== "platform_admin" ? (
+                          {manageable && !isSelf ? (
                             resetPasswordId === member.id ? (
                               <div className="flex flex-col items-end gap-2 sm:flex-row">
                                 <Input

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { CalendarDays, CalendarX2, LogIn, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -24,12 +24,17 @@ import {
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorAlert } from "@/components/shared/error-alert";
 import { formatDisplayDate, todayDateString } from "@/lib/date";
+import { useConfirm } from "@/contexts/confirm-dialog-provider";
 import { getErrorMessage } from "@/lib/errors";
+import { notifyError, notifySuccess } from "@/lib/toast";
 import { getPatientName, getPatientPhone } from "@/lib/patient";
 import { useAuth } from "@/contexts/auth-provider";
 import { canAccessFeature } from "@/lib/permissions";
-import { PlatformClinicSelector } from "@/components/admin/platform-clinic-selector";
+import { ActiveClinicSelector } from "@/components/shared/active-clinic-banner";
+import { useClinicContext } from "@/contexts/clinic-context";
 import { useOperationalScope } from "@/hooks/use-operational-scope";
+import { useRealtimeAppointments } from "@/hooks/use-realtime-appointments";
+import { getClinicSettings } from "@/lib/clinic-settings";
 import {
   canArriveAppointment,
   canCancelAppointment,
@@ -46,14 +51,20 @@ import {
 import { AppointmentsLoadingSkeleton } from "./appointments-loading-skeleton";
 
 export function AppointmentsByDate() {
+  const confirm = useConfirm();
   const { user } = useAuth();
-  const { scope, scopeKey, isScopeReady } = useOperationalScope();
+  const { scope, scopeKey, isScopeReady, operationalClinicId } =
+    useOperationalScope();
+  const { activeClinic } = useClinicContext();
+  const { maxAppointmentsPerSlot } = getClinicSettings(activeClinic);
   const canBook = canAccessFeature(user?.role, "appointmentsBook");
   const [date, setDate] = useState(todayDateString());
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [arrivingId, setArrivingId] = useState<string | null>(null);
+  const [filterText, setFilterText] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
 
   const loadAppointments = useCallback(async (selectedDate: string) => {
     if (!selectedDate || !isScopeReady) return;
@@ -74,6 +85,12 @@ export function AppointmentsByDate() {
     loadAppointments(date);
   }, [date, loadAppointments, isScopeReady]);
 
+  useRealtimeAppointments(
+    operationalClinicId,
+    () => void loadAppointments(date),
+    isScopeReady,
+  );
+
   const patchAppointment = (updated: Appointment) => {
     setAppointments((prev) =>
       prev.map((a) => (a._id === updated._id ? updated : a)),
@@ -83,20 +100,49 @@ export function AppointmentsByDate() {
   const runStatusAction = async (
     id: string,
     action: () => Promise<{ data: Appointment }>,
+    success: { title: string; description?: string },
   ) => {
     setArrivingId(id);
     setError(null);
     try {
       const { data } = await action();
       patchAppointment(data);
+      notifySuccess(success.title, success.description);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to update appointment"));
+      notifyError(err, "Could not update appointment");
     } finally {
       setArrivingId(null);
     }
   };
 
-  const bySlot = appointments.reduce<Record<string, Appointment[]>>((acc, apt) => {
+  const runDestructiveAction = async (
+    apt: Appointment,
+    action: () => Promise<{ data: Appointment }>,
+    dialog: { title: string; description: string; confirmLabel: string },
+    success: { title: string; description?: string },
+  ) => {
+    const ok = await confirm({
+      ...dialog,
+      cancelLabel: "Cancel",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    void runStatusAction(apt._id, action, success);
+  };
+
+  const filteredAppointments = useMemo(() => {
+    const q = filterText.trim().toLowerCase();
+    return appointments.filter((apt) => {
+      if (statusFilter && apt.status !== statusFilter) return false;
+      if (!q) return true;
+      const name = getPatientName(apt.patientId).toLowerCase();
+      const phone = getPatientPhone(apt.patientId).toLowerCase();
+      return name.includes(q) || phone.includes(q) || apt.timeSlot.includes(q);
+    });
+  }, [appointments, filterText, statusFilter]);
+
+  const bySlot = filteredAppointments.reduce<Record<string, Appointment[]>>((acc, apt) => {
     const slot = apt.timeSlot;
     if (!acc[slot]) acc[slot] = [];
     acc[slot].push(apt);
@@ -108,7 +154,7 @@ export function AppointmentsByDate() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
-      <PlatformClinicSelector />
+      <ActiveClinicSelector />
 
       <Card>
         <CardHeader>
@@ -117,7 +163,7 @@ export function AppointmentsByDate() {
             Select date
           </CardTitle>
           <CardDescription>
-            View booked visits for any day — slots show up to 5 patients each
+            View booked visits for any day — capacity follows your clinic settings
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-end gap-4">
@@ -165,6 +211,46 @@ export function AppointmentsByDate() {
         />
       )}
 
+      {!loading && appointments.length > 0 && (
+        <Card>
+          <CardContent className="flex flex-wrap items-end gap-3 pt-6">
+            <div className="min-w-[12rem] flex-1 space-y-1">
+              <Label htmlFor="apt-filter" className="text-xs text-muted-foreground">
+                Filter this day
+              </Label>
+              <Input
+                id="apt-filter"
+                placeholder="Patient name, phone, or time slot…"
+                value={filterText}
+                onChange={(e) => setFilterText(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="apt-status" className="text-xs text-muted-foreground">
+                Status
+              </Label>
+              <select
+                id="apt-status"
+                className="flex h-9 min-w-[9rem] rounded-md border border-input bg-transparent px-2 text-sm"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+              >
+                <option value="">All statuses</option>
+                <option value="scheduled">Scheduled</option>
+                <option value="confirmed">Confirmed</option>
+                <option value="arrived">Arrived</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="no_show">No-show</option>
+              </select>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {filteredAppointments.length} of {appointments.length} on this day
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
       {loading ? (
         <AppointmentsLoadingSkeleton />
       ) : (
@@ -196,7 +282,7 @@ export function AppointmentsByDate() {
               <div className="space-y-8">
                 {slots.map((slot) => {
                   const count = bySlot[slot].length;
-                  const nearlyFull = count >= 4;
+                  const nearlyFull = count >= maxAppointmentsPerSlot - 1;
 
                   return (
                     <div key={slot}>
@@ -209,7 +295,7 @@ export function AppointmentsByDate() {
                               : "text-xs font-normal text-muted-foreground"
                           }
                         >
-                          {count}/5 booked
+                          {count}/{maxAppointmentsPerSlot} booked
                         </span>
                       </h3>
                       <Table>
@@ -245,11 +331,17 @@ export function AppointmentsByDate() {
                                         variant="outline"
                                         disabled={busy}
                                         onClick={() =>
-                                          void runStatusAction(apt._id, () =>
-                                            appointmentService.confirm(
-                                              apt._id,
-                                              scope,
-                                            ),
+                                          void runStatusAction(
+                                            apt._id,
+                                            () =>
+                                              appointmentService.confirm(
+                                                apt._id,
+                                                scope,
+                                              ),
+                                            {
+                                              title: "Appointment confirmed",
+                                              description: `${getPatientName(apt.patientId)} is confirmed for ${apt.timeSlot}.`,
+                                            },
                                           )
                                         }
                                       >
@@ -262,16 +354,23 @@ export function AppointmentsByDate() {
                                         variant="secondary"
                                         disabled={busy}
                                         onClick={() =>
-                                          void runStatusAction(apt._id, async () => {
-                                            const res =
-                                              await appointmentService.arrive(
-                                                apt._id,
-                                                scope,
-                                              );
-                                            return {
-                                              data: res.data.appointment,
-                                            };
-                                          })
+                                          void runStatusAction(
+                                            apt._id,
+                                            async () => {
+                                              const res =
+                                                await appointmentService.arrive(
+                                                  apt._id,
+                                                  scope,
+                                                );
+                                              return {
+                                                data: res.data.appointment,
+                                              };
+                                            },
+                                            {
+                                              title: "Patient arrived",
+                                              description: `${getPatientName(apt.patientId)} was added to the queue.`,
+                                            },
+                                          )
                                         }
                                       >
                                         <LogIn className="mr-1 size-3" />
@@ -284,11 +383,17 @@ export function AppointmentsByDate() {
                                         variant="default"
                                         disabled={busy}
                                         onClick={() =>
-                                          void runStatusAction(apt._id, () =>
-                                            appointmentService.complete(
-                                              apt._id,
-                                              scope,
-                                            ),
+                                          void runStatusAction(
+                                            apt._id,
+                                            () =>
+                                              appointmentService.complete(
+                                                apt._id,
+                                                scope,
+                                              ),
+                                            {
+                                              title: "Visit completed",
+                                              description: `${getPatientName(apt.patientId)}'s appointment is marked complete.`,
+                                            },
                                           )
                                         }
                                       >
@@ -301,11 +406,22 @@ export function AppointmentsByDate() {
                                         variant="ghost"
                                         disabled={busy}
                                         onClick={() =>
-                                          void runStatusAction(apt._id, () =>
-                                            appointmentService.noShow(
-                                              apt._id,
-                                              scope,
-                                            ),
+                                          void runDestructiveAction(
+                                            apt,
+                                            () =>
+                                              appointmentService.noShow(
+                                                apt._id,
+                                                scope,
+                                              ),
+                                            {
+                                              title: "Mark as no-show?",
+                                              description: `${getPatientName(apt.patientId)} did not attend this slot.`,
+                                              confirmLabel: "Mark no-show",
+                                            },
+                                            {
+                                              title: "Marked as no-show",
+                                              description: "The appointment was updated.",
+                                            },
                                           )
                                         }
                                       >
@@ -318,11 +434,22 @@ export function AppointmentsByDate() {
                                         variant="outline"
                                         disabled={busy}
                                         onClick={() =>
-                                          void runStatusAction(apt._id, () =>
-                                            appointmentService.cancel(
-                                              apt._id,
-                                              scope,
-                                            ),
+                                          void runDestructiveAction(
+                                            apt,
+                                            () =>
+                                              appointmentService.cancel(
+                                                apt._id,
+                                                scope,
+                                              ),
+                                            {
+                                              title: "Cancel appointment?",
+                                              description: `${getPatientName(apt.patientId)} at ${apt.timeSlot} will be cancelled.`,
+                                              confirmLabel: "Cancel appointment",
+                                            },
+                                            {
+                                              title: "Appointment cancelled",
+                                              description: "The slot is available for another booking.",
+                                            },
                                           )
                                         }
                                       >

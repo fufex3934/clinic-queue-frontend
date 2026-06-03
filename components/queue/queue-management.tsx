@@ -14,7 +14,9 @@ import { ErrorAlert } from "@/components/shared/error-alert";
 import { useRealtimeQueue } from "@/hooks/use-realtime-queue";
 import { useOperationalScope } from "@/hooks/use-operational-scope";
 import { useQueueLoader } from "@/hooks/use-queue-loader";
+import { useConfirm } from "@/contexts/confirm-dialog-provider";
 import { getErrorMessage } from "@/lib/errors";
+import { notifyError, notifySuccess } from "@/lib/toast";
 import { queueService } from "@/services/queueService";
 import type { QueueEntry, QueueStatus } from "@/types";
 import { CurrentTokenCard } from "./current-token-card";
@@ -24,6 +26,7 @@ import {
 } from "./queue-loading-skeleton";
 import { AddToQueueDialog } from "./add-to-queue-dialog";
 import { ServeNextDialog } from "./serve-next-dialog";
+import { QueueDraggableWaiting } from "./queue-draggable-waiting";
 import { QueueTabPanel } from "./queue-tab-panel";
 
 const TABS: { key: QueueStatus; label: string }[] = [
@@ -34,6 +37,7 @@ const TABS: { key: QueueStatus; label: string }[] = [
 ];
 
 export function QueueManagement() {
+  const confirm = useConfirm();
   const { scope, scopeKey, operationalClinicId, isAdmin, isScopeReady, isPlatformView } =
     useOperationalScope();
   const { entries, loading, error, setError, loadQueue } = useQueueLoader(
@@ -79,24 +83,66 @@ export function QueueManagement() {
       await queueService.serveNext(scope);
       setDialogOpen(false);
       await loadQueue({ silent: true });
+      notifySuccess(
+        "Now serving",
+        nextWaiting
+          ? `Token #${nextWaiting.tokenNumber} is being served.`
+          : "The next patient in line is being served.",
+      );
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to serve next patient"));
+      notifyError(err, "Could not serve next patient");
     } finally {
       setServing(false);
     }
   };
 
-  const runAction = async (id: string, fn: () => Promise<unknown>) => {
+  const runAction = async (
+    id: string,
+    fn: () => Promise<unknown>,
+    success?: { title: string; description?: string },
+  ) => {
     setBusyId(id);
     setError(null);
     try {
       await fn();
       await loadQueue({ silent: true });
+      if (success) notifySuccess(success.title, success.description);
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Queue action failed"));
+      notifyError(err, "Queue action failed");
     } finally {
       setBusyId(null);
     }
+  };
+
+  const handleSkip = async (id: string) => {
+    const ok = await confirm({
+      title: "Skip this patient?",
+      description:
+        "They will move to the skipped list. You can return them to waiting later if needed.",
+      confirmLabel: "Skip",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    void runAction(id, () => queueService.skip(id, scope), {
+      title: "Patient skipped",
+      description: "The token was moved to the skipped list.",
+    });
+  };
+
+  const handleRemove = async (id: string) => {
+    const ok = await confirm({
+      title: "Remove from queue?",
+      description: "This removes the patient from today's queue. This cannot be undone.",
+      confirmLabel: "Remove",
+      variant: "destructive",
+    });
+    if (!ok) return;
+    void runAction(id, () => queueService.remove(id, scope), {
+      title: "Removed from queue",
+      description: "The patient was removed from the waiting line.",
+    });
   };
 
   return (
@@ -178,22 +224,52 @@ export function QueueManagement() {
                 </div>
               </CardHeader>
               <CardContent>
-                <QueueTabPanel
-                  entries={byStatus[activeTab]}
-                  showSkip={activeTab === "waiting"}
-                  showRemove={activeTab !== "serving"}
-                  showForceServe={isAdmin && activeTab === "waiting"}
-                  busyId={busyId}
-                  onSkip={(id) =>
-                    void runAction(id, () => queueService.skip(id, scope))
-                  }
-                  onRemove={(id) =>
-                    void runAction(id, () => queueService.remove(id, scope))
-                  }
-                  onForceServe={(id) =>
-                    void runAction(id, () => queueService.forceServe(id, scope))
-                  }
-                />
+                {isAdmin && activeTab === "waiting" ? (
+                  <QueueDraggableWaiting
+                    entries={byStatus.waiting}
+                    busyId={busyId}
+                    showSkip
+                    showRemove
+                    showForceServe
+                    onReorder={async (orderedIds) => {
+                      await queueService.reorder(orderedIds, scope);
+                      await loadQueue({ silent: true });
+                    }}
+                    onSkip={(id) => void handleSkip(id)}
+                    onRemove={(id) => void handleRemove(id)}
+                    onForceServe={(id) =>
+                      void runAction(
+                        id,
+                        () => queueService.forceServe(id, scope),
+                        {
+                          title: "Patient called",
+                          description: "This token is now being served.",
+                        },
+                      )
+                    }
+                  />
+                ) : (
+                  <QueueTabPanel
+                    entries={byStatus[activeTab]}
+                    allWaiting={byStatus.waiting}
+                    showSkip={activeTab === "waiting"}
+                    showRemove={activeTab !== "serving"}
+                    showForceServe={isAdmin && activeTab === "waiting"}
+                    busyId={busyId}
+                    onSkip={(id) => void handleSkip(id)}
+                    onRemove={(id) => void handleRemove(id)}
+                    onForceServe={(id) =>
+                      void runAction(
+                        id,
+                        () => queueService.forceServe(id, scope),
+                        {
+                          title: "Patient called",
+                          description: "This token is now being served.",
+                        },
+                      )
+                    }
+                  />
+                )}
               </CardContent>
             </Card>
           </>
