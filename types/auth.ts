@@ -18,5 +18,5 @@ export interface AuthResponse {
 }
 
 export interface SessionResponse {
-  user: AuthUser;
+  user: AuthUser | null;
 }

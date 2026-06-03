@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerAccessToken } from "@/lib/auth/server";
+import { resolveAccessToken } from "@/lib/auth/resolve-access-token";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -7,7 +7,7 @@ async function proxyRequest(
   request: NextRequest,
   pathSegments: string[],
 ): Promise<NextResponse> {
-  const token = await getServerAccessToken();
+  const token = await resolveAccessToken(request);
 
   if (!token) {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });

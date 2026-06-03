@@ -1,4 +1,5 @@
-import axios from "axios";
+import axios, { type InternalAxiosRequestConfig } from "axios";
+import { getStoredAccessToken } from "@/lib/auth/token-storage";
 import type {
   AuthResponse,
   LoginCredentials,
@@ -10,6 +11,14 @@ const authClient = axios.create({
   headers: { "Content-Type": "application/json" },
   timeout: 15_000,
   withCredentials: true,
+});
+
+authClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const token = getStoredAccessToken();
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 authClient.interceptors.response.use(

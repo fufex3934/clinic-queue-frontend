@@ -1,14 +1,15 @@
-import { NextResponse } from "next/server";
-import { getServerAccessToken } from "@/lib/auth/server";
+import { NextRequest, NextResponse } from "next/server";
+import { clearAccessTokenCookie } from "@/lib/auth/session";
+import { resolveAccessToken } from "@/lib/auth/resolve-access-token";
 import type { AuthUser } from "@/types/auth";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
-export async function GET() {
-  const token = await getServerAccessToken();
+export async function GET(request: NextRequest) {
+  const token = await resolveAccessToken(request);
 
   if (!token) {
-    return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
+    return NextResponse.json({ user: null });
   }
 
   let backendRes: Response;
@@ -25,7 +26,9 @@ export async function GET() {
   }
 
   if (!backendRes.ok) {
-    return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
+    const response = NextResponse.json({ user: null });
+    clearAccessTokenCookie(response);
+    return response;
   }
 
   const user = (await backendRes.json()) as AuthUser;

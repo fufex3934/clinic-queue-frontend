@@ -59,8 +59,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     try {
       const { data } = await authService.getSession();
-      setUser(data.user);
-      setStoredUser(data.user);
+      if (data.user) {
+        setUser(data.user);
+        setStoredUser(data.user);
+      } else {
+        setUser(null);
+        clearAuthStorage();
+      }
     } catch {
       setUser(null);
       clearAuthStorage();
