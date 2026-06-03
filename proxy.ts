@@ -8,7 +8,7 @@ import {
 } from "@/lib/auth/session";
 import { getDefaultHomePath } from "@/lib/permissions";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const token = request.cookies.get(ACCESS_TOKEN_COOKIE)?.value;
   const { pathname } = request.nextUrl;
 
@@ -71,7 +71,9 @@ export function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
+    "/dashboard",
     "/dashboard/:path*",
+    "/admin",
     "/admin/:path*",
     "/login",
     "/platform",
