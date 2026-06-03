@@ -29,6 +29,13 @@ import { useClinicContext } from "@/contexts/clinic-context";
 import { useConfirm } from "@/contexts/confirm-dialog-provider";
 import { getErrorMessage } from "@/lib/errors";
 import { notifyError, notifySuccess } from "@/lib/toast";
+import {
+  ClinicContactFields,
+  clinicContactFromClinic,
+  clinicContactPayload,
+  emptyClinicContactForm,
+} from "@/components/shared/clinic-contact-fields";
+import { formatClinicAddress, clinicContactSummary } from "@/lib/clinic-display";
 import { clinicService } from "@/services/clinicService";
 import type { Clinic } from "@/types/clinic";
 
@@ -58,6 +65,9 @@ export function ClinicAdministration({
   const [editLocation, setEditLocation] = useState("");
   const [newName, setNewName] = useState("");
   const [newLocation, setNewLocation] = useState("");
+  const [newContact, setNewContact] = useState(emptyClinicContactForm);
+  const [editContact, setEditContact] = useState(emptyClinicContactForm);
+  const [myContact, setMyContact] = useState(emptyClinicContactForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -81,6 +91,7 @@ export function ClinicAdministration({
     setEditClinicId(clinic._id);
     setEditName(clinic.name);
     setEditLocation(clinic.location);
+    setEditContact(clinicContactFromClinic(clinic));
     setWorkingHoursStart(clinic.workingHoursStart ?? "09:00");
     setWorkingHoursEnd(clinic.workingHoursEnd ?? "17:00");
     setMaxAppointmentsPerSlot(clinic.maxAppointmentsPerSlot ?? 5);
@@ -124,6 +135,7 @@ export function ClinicAdministration({
         setMyClinic(data);
         setName(data.name);
         setLocation(data.location);
+        setMyContact(clinicContactFromClinic(data));
         setWorkingHoursStart(data.workingHoursStart ?? "09:00");
         setWorkingHoursEnd(data.workingHoursEnd ?? "17:00");
         setMaxAppointmentsPerSlot(data.maxAppointmentsPerSlot ?? 5);
@@ -176,6 +188,7 @@ export function ClinicAdministration({
       const { data } = await clinicService.update(myClinic._id, {
         name: name.trim(),
         location: location.trim(),
+        ...clinicContactPayload(myContact),
         workingHoursStart,
         workingHoursEnd,
         maxAppointmentsPerSlot,
@@ -199,6 +212,7 @@ export function ClinicAdministration({
       await clinicService.update(editClinicId, {
         name: editName.trim(),
         location: editLocation.trim(),
+        ...clinicContactPayload(editContact),
         workingHoursStart,
         workingHoursEnd,
         maxAppointmentsPerSlot,
@@ -325,9 +339,11 @@ export function ClinicAdministration({
       const { data } = await clinicService.create({
         name: newName.trim(),
         location: newLocation.trim(),
+        ...clinicContactPayload(newContact),
       });
       setNewName("");
       setNewLocation("");
+      setNewContact(emptyClinicContactForm());
       await load();
       await syncPlatformClinicList();
       handleSelectClinic(data._id);
@@ -385,14 +401,21 @@ export function ClinicAdministration({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="clinic-new-location">Location</Label>
+                    <Label htmlFor="clinic-new-location">Location label</Label>
                     <Input
                       id="clinic-new-location"
                       value={newLocation}
                       onChange={(e) => setNewLocation(e.target.value)}
                       required
+                      placeholder="e.g. Downtown branch"
                     />
                   </div>
+                  <ClinicContactFields
+                    idPrefix="new-clinic"
+                    contact={newContact}
+                    onChange={setNewContact}
+                    disabled={saving}
+                  />
                   <Button type="submit" className="w-full" disabled={saving}>
                     {saving ? "Creating…" : "Create clinic"}
                   </Button>
@@ -465,8 +488,13 @@ export function ClinicAdministration({
                             selectedId === c._id ? "bg-muted/50" : undefined
                           }
                         >
-                          <TableCell className="font-medium">{c.name}</TableCell>
-                          <TableCell>{c.location}</TableCell>
+                          <TableCell className="font-medium">
+                            {c.name}
+                            <p className="text-xs font-normal text-muted-foreground">
+                              {clinicContactSummary(c)}
+                            </p>
+                          </TableCell>
+                          <TableCell>{formatClinicAddress(c)}</TableCell>
                           <TableCell>
                             <Badge
                               variant={
@@ -546,7 +574,7 @@ export function ClinicAdministration({
               <CardContent>
                 <form
                   onSubmit={handlePlatformUpdate}
-                  className="mx-auto max-w-md space-y-4"
+                  className="mx-auto max-w-lg space-y-4"
                 >
                   <div className="space-y-2">
                     <Label htmlFor="edit-clinic-name">Name</Label>
@@ -558,7 +586,7 @@ export function ClinicAdministration({
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="edit-clinic-location">Location</Label>
+                    <Label htmlFor="edit-clinic-location">Location label</Label>
                     <Input
                       id="edit-clinic-location"
                       value={editLocation}
@@ -566,6 +594,12 @@ export function ClinicAdministration({
                       required
                     />
                   </div>
+                  <ClinicContactFields
+                    idPrefix="edit-clinic"
+                    contact={editContact}
+                    onChange={setEditContact}
+                    disabled={saving}
+                  />
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
                       <Label htmlFor="edit-hours-start">Opens</Label>
@@ -642,7 +676,7 @@ export function ClinicAdministration({
           <CardContent>
             <form
               onSubmit={handleUpdateMine}
-              className="mx-auto max-w-md space-y-4"
+              className="mx-auto max-w-lg space-y-4"
             >
               <div className="space-y-2">
                 <Label htmlFor="clinic-name">Name</Label>
@@ -654,7 +688,7 @@ export function ClinicAdministration({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="clinic-location">Location</Label>
+                <Label htmlFor="clinic-location">Location label</Label>
                 <Input
                   id="clinic-location"
                   value={location}
@@ -662,6 +696,12 @@ export function ClinicAdministration({
                   required
                 />
               </div>
+              <ClinicContactFields
+                idPrefix="my-clinic"
+                contact={myContact}
+                onChange={setMyContact}
+                disabled={saving}
+              />
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
                   <Label htmlFor="hours-start">Opens</Label>

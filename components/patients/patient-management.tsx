@@ -25,9 +25,16 @@ import { ErrorAlert } from "@/components/shared/error-alert";
 import { EmptyState } from "@/components/shared/empty-state";
 import { PlatformClinicSelector } from "@/components/admin/platform-clinic-selector";
 import { ListDataToolbar } from "@/components/shared/list-data-toolbar";
+import {
+  PatientProfileFields,
+  emptyPatientProfileForm,
+  patientProfileFromPatient,
+  patientProfilePayload,
+} from "@/components/shared/patient-profile-fields";
 import { useAuth } from "@/contexts/auth-provider";
 import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { useOperationalScope } from "@/hooks/use-operational-scope";
+import { formatPatientAge, formatPatientGender } from "@/lib/patient";
 import { getErrorMessage } from "@/lib/errors";
 import { notifyError, notifySuccess } from "@/lib/toast";
 import { canAccessFeature } from "@/lib/permissions";
@@ -44,9 +51,11 @@ export function PatientManagement() {
   const [formError, setFormError] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [createProfile, setCreateProfile] = useState(emptyPatientProfileForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editPhone, setEditPhone] = useState("");
+  const [editProfile, setEditProfile] = useState(emptyPatientProfileForm);
 
   const fetchPatients = useCallback(
     (params: ListQueryParams) =>
@@ -83,6 +92,7 @@ export function PatientManagement() {
     setEditingId(patient._id);
     setEditName(patient.name);
     setEditPhone(patient.phone);
+    setEditProfile(patientProfileFromPatient(patient));
   };
 
   const handleUpdate = async (patientId: string) => {
@@ -91,12 +101,16 @@ export function PatientManagement() {
     try {
       await patientService.update(
         patientId,
-        { name: editName.trim(), phone: editPhone.trim() },
+        {
+          name: editName.trim(),
+          phone: editPhone.trim(),
+          ...patientProfilePayload(editProfile),
+        },
         scope,
       );
       setEditingId(null);
       await reload();
-      notifySuccess("Patient updated", "Contact details were saved.");
+      notifySuccess("Patient updated", "Profile was saved.");
     } catch (err: unknown) {
       setFormError(getErrorMessage(err, "Failed to update patient"));
       notifyError(err, "Could not update patient");
@@ -111,11 +125,16 @@ export function PatientManagement() {
     setFormError(null);
     try {
       await patientService.create(
-        { name: name.trim(), phone: phone.trim() },
+        {
+          name: name.trim(),
+          phone: phone.trim(),
+          ...patientProfilePayload(createProfile),
+        },
         scope,
       );
       setName("");
       setPhone("");
+      setCreateProfile(emptyPatientProfileForm());
       await reload();
       notifySuccess(
         "Patient registered",
@@ -151,14 +170,14 @@ export function PatientManagement() {
         />
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,340px)_1fr]">
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <UserPlus className="size-4" />
               New patient
             </CardTitle>
-            <CardDescription>Add to your clinic registry</CardDescription>
+            <CardDescription>Name and phone are required</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCreate} className="space-y-4">
@@ -173,7 +192,7 @@ export function PatientManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="patient-phone">Phone</Label>
+                <Label htmlFor="patient-phone">Primary phone</Label>
                 <Input
                   id="patient-phone"
                   value={phone}
@@ -182,6 +201,12 @@ export function PatientManagement() {
                   placeholder="+1 555 0100"
                 />
               </div>
+              <PatientProfileFields
+                idPrefix="new"
+                profile={createProfile}
+                onChange={setCreateProfile}
+                disabled={saving}
+              />
               <Button type="submit" className="w-full" disabled={saving}>
                 {saving ? "Saving…" : "Create patient"}
               </Button>
@@ -200,7 +225,7 @@ export function PatientManagement() {
             <ListDataToolbar
               search={search}
               onSearchChange={setSearch}
-              searchPlaceholder="Search by name or phone…"
+              searchPlaceholder="Search name, phone, notes…"
               sortBy={sortBy}
               sortOptions={[
                 { value: "createdAt", label: "Date added" },
@@ -226,80 +251,107 @@ export function PatientManagement() {
                 description="Create your first patient to use queue and appointments."
               />
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {patients.map((p) => (
-                    <TableRow key={p._id}>
-                      {editingId === p._id ? (
-                        <>
-                          <TableCell>
-                            <Input
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              className="h-8"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Input
-                              value={editPhone}
-                              onChange={(e) => setEditPhone(e.target.value)}
-                              className="h-8"
-                            />
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                size="sm"
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Phone</TableHead>
+                      <TableHead>Age</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {patients.map((p) => (
+                      <TableRow key={p._id}>
+                        {editingId === p._id ? (
+                          <TableCell colSpan={4} className="bg-muted/30 p-4">
+                            <div className="space-y-3">
+                              <div className="grid gap-3 sm:grid-cols-2">
+                                <Input
+                                  value={editName}
+                                  onChange={(e) => setEditName(e.target.value)}
+                                  placeholder="Name"
+                                />
+                                <Input
+                                  value={editPhone}
+                                  onChange={(e) => setEditPhone(e.target.value)}
+                                  placeholder="Phone"
+                                />
+                              </div>
+                              <PatientProfileFields
+                                idPrefix="edit"
+                                profile={editProfile}
+                                onChange={setEditProfile}
                                 disabled={saving}
-                                onClick={() => void handleUpdate(p._id)}
-                              >
-                                Save
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => setEditingId(null)}
-                              >
-                                Cancel
-                              </Button>
+                              />
+                              <div className="flex gap-2">
+                                <Button
+                                  size="sm"
+                                  disabled={saving}
+                                  onClick={() => void handleUpdate(p._id)}
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => setEditingId(null)}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
                             </div>
                           </TableCell>
-                        </>
-                      ) : (
-                        <>
-                          <TableCell className="font-medium">
-                            <Link
-                              href={`/dashboard/patients/${p._id}`}
-                              className="text-primary hover:underline"
-                            >
-                              {p.name}
-                            </Link>
-                          </TableCell>
-                          <TableCell>{p.phone}</TableCell>
-                          <TableCell className="text-right">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="outline"
-                              onClick={() => startEdit(p)}
-                            >
-                              <Pencil className="mr-1 size-3" />
-                              Edit
-                            </Button>
-                          </TableCell>
-                        </>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                        ) : (
+                          <>
+                            <TableCell className="font-medium">
+                              <Link
+                                href={`/dashboard/patients/${p._id}`}
+                                className="text-primary hover:underline"
+                              >
+                                {p.name}
+                              </Link>
+                              {p.notes ? (
+                                <p className="mt-0.5 line-clamp-1 text-xs text-muted-foreground">
+                                  {p.notes}
+                                </p>
+                              ) : null}
+                            </TableCell>
+                            <TableCell>
+                              <p>{p.phone}</p>
+                              {p.secondaryPhone ? (
+                                <p className="text-xs text-muted-foreground">
+                                  Alt: {p.secondaryPhone}
+                                </p>
+                              ) : null}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {formatPatientAge(p.ageYears, p.dateOfBirth)}
+                              {p.gender ? (
+                                <span className="block text-xs">
+                                  {formatPatientGender(p.gender)}
+                                </span>
+                              ) : null}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => startEdit(p)}
+                              >
+                                <Pencil className="mr-1 size-3" />
+                                Edit
+                              </Button>
+                            </TableCell>
+                          </>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
           </CardContent>
         </Card>
