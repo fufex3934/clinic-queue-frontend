@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { io, type Socket } from "socket.io-client";
 import { getStoredAccessToken } from "@/lib/auth/token-storage";
+import { teardownRealtimeSocket } from "@/lib/realtime-socket";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 const REFRESH_DEBOUNCE_MS = 1200;
@@ -44,10 +45,7 @@ export function useRealtimeQueue(
 
     return () => {
       if (debounceTimer) clearTimeout(debounceTimer);
-      socket?.off("queue.updated", scheduleRefresh);
-      socket?.off("queue.added", scheduleRefresh);
-      socket?.off("queue.served", scheduleRefresh);
-      socket?.disconnect();
+      if (socket) teardownRealtimeSocket(socket);
     };
   }, [clinicId, enabled]);
 }

@@ -171,7 +171,7 @@ export function PatientManagement() {
       )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,380px)_1fr]">
-        <Card>
+        <Card className="shadow-elevation-sm">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <UserPlus className="size-4" />
@@ -214,7 +214,7 @@ export function PatientManagement() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="shadow-elevation-sm">
           <CardHeader>
             <CardTitle className="text-base">Patient directory</CardTitle>
             <CardDescription>
@@ -252,7 +252,7 @@ export function PatientManagement() {
               />
             ) : (
               <div className="overflow-x-auto">
-                <Table>
+                <Table className="table-zebra">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>

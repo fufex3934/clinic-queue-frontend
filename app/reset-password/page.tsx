@@ -4,16 +4,10 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AuthLayout } from "@/components/shared/auth-layout";
 import { authService } from "@/services/authService";
 import { getErrorMessage } from "@/lib/errors";
 
@@ -41,64 +35,73 @@ function ResetPasswordForm() {
   };
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Reset password</CardTitle>
-        <CardDescription>Enter your new password</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
-          {message && (
-            <Alert>
-              <AlertDescription>
-                {message}{" "}
-                <Link href="/login" className="text-primary underline">
-                  Sign in
-                </Link>
-              </AlertDescription>
-            </Alert>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="token">Reset token</Label>
-            <Input
-              id="token"
-              value={token}
-              onChange={(e) => setToken(e.target.value)}
-              required
-              minLength={32}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">New password</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={8}
-            />
-          </div>
-          <Button type="submit" className="w-full" disabled={loading || !!message}>
-            {loading ? "Saving…" : "Reset password"}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <AuthLayout
+      title="Reset password"
+      description="Enter your new password"
+      backHref="/login"
+      backLabel="Back to login"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        {message && (
+          <Alert>
+            <AlertDescription>
+              {message}{" "}
+              <Link href="/login" className="font-medium text-primary underline">
+                Sign in
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+        <div className="space-y-2">
+          <Label htmlFor="token">Reset token</Label>
+          <Input
+            id="token"
+            value={token}
+            onChange={(e) => setToken(e.target.value)}
+            required
+            minLength={32}
+            className="h-10 font-mono text-sm"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="password">New password</Label>
+          <Input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+            minLength={8}
+            className="h-10"
+          />
+        </div>
+        <Button
+          type="submit"
+          className="h-10 w-full"
+          disabled={loading || !!message}
+        >
+          {loading ? "Saving…" : "Reset password"}
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }
 
 export default function ResetPasswordPage() {
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
-        <ResetPasswordForm />
-      </Suspense>
-    </div>
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center text-sm text-muted-foreground">
+          Loading…
+        </div>
+      }
+    >
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

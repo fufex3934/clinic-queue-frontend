@@ -177,7 +177,7 @@ export function PlatformSubscriptionsOverview() {
         </ListDataToolbar>
 
         <div className="overflow-x-auto">
-          <Table>
+          <Table className="table-zebra">
             <TableHeader>
               <TableRow>
                 <TableHead>Clinic</TableHead>

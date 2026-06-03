@@ -1,26 +1,26 @@
-import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
+import { APPOINTMENT_STATUS_STYLES } from "@/lib/status-theme";
 import type { AppointmentStatus } from "@/types";
 
-const labels: Record<AppointmentStatus, string> = {
-  scheduled: "Scheduled",
-  confirmed: "Confirmed",
-  arrived: "Arrived",
-  cancelled: "Cancelled",
-  completed: "Completed",
-  no_show: "No show",
-};
-
-export function AppointmentStatusBadge({ status }: { status: AppointmentStatus }) {
-  const variant =
-    status === "cancelled"
-      ? "outline"
-      : status === "completed"
-        ? "secondary"
-        : status === "arrived"
-          ? "default"
-          : "default";
-
-  return <Badge variant={variant}>{labels[status]}</Badge>;
+export function AppointmentStatusBadge({
+  status,
+  className,
+}: {
+  status: AppointmentStatus;
+  className?: string;
+}) {
+  const styles = APPOINTMENT_STATUS_STYLES[status];
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold",
+        styles.badge,
+        className,
+      )}
+    >
+      {styles.label}
+    </span>
+  );
 }
 
 const lifecycleSteps = [

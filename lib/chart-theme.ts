@@ -8,15 +8,17 @@ export const CHART_COLORS = {
   chart5: "var(--color-chart-5)",
   muted: "var(--color-muted-foreground)",
   border: "var(--color-border)",
+  waiting: "var(--color-status-waiting-foreground)",
+  completed: "var(--color-status-completed-foreground)",
 } as const;
 
 export const SERIES_PALETTE = [
   CHART_COLORS.primary,
-  "oklch(0.62 0.14 195)",
-  "oklch(0.72 0.1 160)",
-  "oklch(0.68 0.12 250)",
-  "oklch(0.58 0.08 40)",
+  CHART_COLORS.chart2,
   CHART_COLORS.chart3,
+  CHART_COLORS.chart4,
+  CHART_COLORS.chart5,
+  CHART_COLORS.muted,
 ] as const;
 
 export const chartTooltipStyle = {
@@ -25,7 +27,7 @@ export const chartTooltipStyle = {
     border: "1px solid var(--color-border)",
     borderRadius: "var(--radius-lg)",
     fontSize: "12px",
-    boxShadow: "0 4px 12px rgb(0 0 0 / 0.08)",
+    boxShadow: "var(--shadow-md)",
   },
   labelStyle: { color: "var(--color-foreground)", fontWeight: 600 },
   itemStyle: { color: "var(--color-muted-foreground)" },
@@ -36,4 +38,9 @@ export const chartAxisTick = {
   fontSize: 11,
 };
 
-export const chartGridStroke = "var(--color-border)";
+export const chartGridStroke = "color-mix(in oklch, var(--color-border) 80%, transparent)";
+
+export const chartCartesianStyle = {
+  stroke: chartGridStroke,
+  strokeDasharray: "4 4",
+};

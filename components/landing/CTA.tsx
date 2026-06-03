@@ -5,7 +5,7 @@ export function CTA() {
   return (
     <section>
       <div className="mx-auto w-full max-w-6xl px-4 py-12 md:px-6 md:py-16">
-        <div className="rounded-2xl bg-primary px-6 py-10 text-primary-foreground md:px-10">
+        <div className="rounded-2xl bg-primary px-6 py-10 text-primary-foreground shadow-elevation-lg md:px-10">
           <h2 className="text-2xl font-semibold md:text-3xl">
             Start simplifying your clinic operations today
           </h2>

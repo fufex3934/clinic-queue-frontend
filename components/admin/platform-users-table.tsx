@@ -164,7 +164,7 @@ export function PlatformUsersTable() {
           {users.length === 0 && !loading ? (
             <p className="text-sm text-muted-foreground">No users match your filters</p>
           ) : (
-            <Table>
+            <Table className="table-zebra">
               <TableHeader>
                 <TableRow>
                   <TableHead>Name</TableHead>

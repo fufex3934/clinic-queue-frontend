@@ -352,7 +352,7 @@ export function StaffManagement({
                 description="Add receptionists or additional clinic admins."
               />
             ) : (
-              <Table>
+              <Table className="table-zebra">
                 <TableHeader>
                   <TableRow>
                     <TableHead>Name</TableHead>

@@ -3,16 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AuthLayout } from "@/components/shared/auth-layout";
 import { authService } from "@/services/authService";
 import { getErrorMessage } from "@/lib/errors";
 
@@ -43,61 +37,57 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle>Forgot password</CardTitle>
-          <CardDescription>
-            Enter your email or phone to receive reset instructions
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {error && (
-              <Alert variant="destructive">
-                <AlertDescription>{error}</AlertDescription>
-              </Alert>
-            )}
-            {message && (
-              <Alert>
-                <AlertDescription>{message}</AlertDescription>
-              </Alert>
-            )}
-            {devToken && (
-              <Alert>
-                <AlertDescription>
-                  Dev reset token:{" "}
-                  <Link
-                    href={`/reset-password?token=${devToken}`}
-                    className="font-mono text-primary underline"
-                  >
-                    use this link
-                  </Link>
-                </AlertDescription>
-              </Alert>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="identifier">Email or phone</Label>
-              <Input
-                id="identifier"
-                value={identifier}
-                onChange={(e) => setIdentifier(e.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Sending…" : "Send reset link"}
-            </Button>
-            <Button
-              variant="link"
-              className="w-full"
-              render={<Link href="/login" />}
-            >
-              Back to login
-            </Button>
-          </form>
-        </CardContent>
-      </Card>
-    </div>
+    <AuthLayout
+      title="Forgot password"
+      description="Enter your email or phone to receive reset instructions"
+      backHref="/login"
+      backLabel="Back to login"
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {error && (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
+        {message && (
+          <Alert>
+            <AlertDescription>{message}</AlertDescription>
+          </Alert>
+        )}
+        {devToken && (
+          <Alert>
+            <AlertDescription>
+              Dev reset token:{" "}
+              <Link
+                href={`/reset-password?token=${devToken}`}
+                className="font-mono text-primary underline"
+              >
+                use this link
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
+        <div className="space-y-2">
+          <Label htmlFor="identifier">Email or phone</Label>
+          <Input
+            id="identifier"
+            value={identifier}
+            onChange={(e) => setIdentifier(e.target.value)}
+            required
+            className="h-10"
+          />
+        </div>
+        <Button type="submit" className="h-10 w-full" disabled={loading}>
+          {loading ? "Sending…" : "Send reset link"}
+        </Button>
+        <Button
+          variant="link"
+          className="w-full"
+          render={<Link href="/login" />}
+        >
+          Back to login
+        </Button>
+      </form>
+    </AuthLayout>
   );
 }

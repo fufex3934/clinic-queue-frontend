@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, RefreshCw } from "lucide-react";
+import { ArrowRight, RefreshCw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
@@ -17,12 +18,13 @@ import { useQueueLoader } from "@/hooks/use-queue-loader";
 import { useConfirm } from "@/contexts/confirm-dialog-provider";
 import { getErrorMessage } from "@/lib/errors";
 import { notifyError, notifySuccess } from "@/lib/toast";
+import { cn } from "@/lib/utils";
 import { queueService } from "@/services/queueService";
 import type { QueueEntry, QueueStatus } from "@/types";
 import { CurrentTokenCard } from "./current-token-card";
 import {
   CurrentTokenSkeleton,
-  QueueTableSkeleton,
+  QueueListSkeleton,
 } from "./queue-loading-skeleton";
 import { AddToQueueDialog } from "./add-to-queue-dialog";
 import { ServeNextDialog } from "./serve-next-dialog";
@@ -155,12 +157,22 @@ export function QueueManagement() {
         </p>
       )}
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm text-muted-foreground">
-          {loading
-            ? "Updating queue…"
-            : `${waitingCount} patient${waitingCount === 1 ? "" : "s"} waiting`}
-        </p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Users className="size-4 shrink-0" aria-hidden />
+          {loading ? (
+            "Updating queue…"
+          ) : (
+            <>
+              <span className="text-2xl font-bold tabular-nums text-foreground">
+                {waitingCount}
+              </span>
+              <span>
+                patient{waitingCount === 1 ? "" : "s"} waiting today
+              </span>
+            </>
+          )}
+        </div>
         <div className="flex flex-wrap gap-2">
           <AddToQueueDialog
             onAdded={() => void loadQueue({ silent: true })}
@@ -174,16 +186,17 @@ export function QueueManagement() {
             disabled={loading || serving}
           >
             <RefreshCw
-              className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`}
+              className={cn("mr-2 size-4", loading && "animate-spin")}
             />
             Refresh
           </Button>
           <Button
             size="lg"
+            className="shadow-elevation-sm"
             onClick={() => setDialogOpen(true)}
             disabled={loading || serving || waitingCount === 0}
           >
-            <ArrowRight className="mr-2 size-4" />
+            <ArrowRight className="mr-2 size-5" />
             Serve Next
           </Button>
         </div>
@@ -197,84 +210,102 @@ export function QueueManagement() {
         />
       )}
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,320px)_1fr]">
-        {loading ? (
-          <>
-            <CurrentTokenSkeleton />
-            <QueueTableSkeleton />
-          </>
-        ) : (
-          <>
-            <CurrentTokenCard serving={servingEntry} />
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">Today&apos;s queue</CardTitle>
-                <div className="flex flex-wrap gap-1 pt-2">
-                  {TABS.map(({ key, label }) => (
-                    <Button
-                      key={key}
-                      type="button"
-                      size="sm"
-                      variant={activeTab === key ? "default" : "outline"}
-                      onClick={() => setActiveTab(key)}
+      {loading ? (
+        <div className="space-y-6">
+          <CurrentTokenSkeleton />
+          <QueueListSkeleton />
+        </div>
+      ) : (
+        <div className="space-y-6">
+          <CurrentTokenCard serving={servingEntry} />
+
+          <Card className="shadow-elevation-sm">
+            <CardHeader className="border-b border-subtle pb-4">
+              <CardTitle className="text-lg">Today&apos;s queue</CardTitle>
+              <CardDescription>
+                Waiting line, completed visits, and skipped tokens
+              </CardDescription>
+              <div
+                className="flex flex-wrap gap-1.5 pt-3"
+                role="tablist"
+                aria-label="Queue sections"
+              >
+                {TABS.map(({ key, label }) => (
+                  <Button
+                    key={key}
+                    type="button"
+                    size="sm"
+                    variant={activeTab === key ? "default" : "outline"}
+                    role="tab"
+                    aria-selected={activeTab === key}
+                    onClick={() => setActiveTab(key)}
+                  >
+                    {label}
+                    <span
+                      className={cn(
+                        "ml-1.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums",
+                        activeTab === key
+                          ? "bg-primary-foreground/20"
+                          : "bg-muted",
+                      )}
                     >
-                      {label} ({byStatus[key].length})
-                    </Button>
-                  ))}
-                </div>
-              </CardHeader>
-              <CardContent>
-                {isAdmin && activeTab === "waiting" ? (
-                  <QueueDraggableWaiting
-                    entries={byStatus.waiting}
-                    busyId={busyId}
-                    showSkip
-                    showRemove
-                    showForceServe
-                    onReorder={async (orderedIds) => {
-                      await queueService.reorder(orderedIds, scope);
-                      await loadQueue({ silent: true });
-                    }}
-                    onSkip={(id) => void handleSkip(id)}
-                    onRemove={(id) => void handleRemove(id)}
-                    onForceServe={(id) =>
-                      void runAction(
-                        id,
-                        () => queueService.forceServe(id, scope),
-                        {
-                          title: "Patient called",
-                          description: "This token is now being served.",
-                        },
-                      )
-                    }
-                  />
-                ) : (
-                  <QueueTabPanel
-                    entries={byStatus[activeTab]}
-                    allWaiting={byStatus.waiting}
-                    showSkip={activeTab === "waiting"}
-                    showRemove={activeTab !== "serving"}
-                    showForceServe={isAdmin && activeTab === "waiting"}
-                    busyId={busyId}
-                    onSkip={(id) => void handleSkip(id)}
-                    onRemove={(id) => void handleRemove(id)}
-                    onForceServe={(id) =>
-                      void runAction(
-                        id,
-                        () => queueService.forceServe(id, scope),
-                        {
-                          title: "Patient called",
-                          description: "This token is now being served.",
-                        },
-                      )
-                    }
-                  />
-                )}
-              </CardContent>
-            </Card>
-          </>
-        )}
-      </div>
+                      {byStatus[key].length}
+                    </span>
+                  </Button>
+                ))}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              {isAdmin && activeTab === "waiting" ? (
+                <QueueDraggableWaiting
+                  entries={byStatus.waiting}
+                  busyId={busyId}
+                  showSkip
+                  showRemove
+                  showForceServe
+                  onReorder={async (orderedIds) => {
+                    await queueService.reorder(orderedIds, scope);
+                    await loadQueue({ silent: true });
+                  }}
+                  onSkip={(id) => void handleSkip(id)}
+                  onRemove={(id) => void handleRemove(id)}
+                  onForceServe={(id) =>
+                    void runAction(
+                      id,
+                      () => queueService.forceServe(id, scope),
+                      {
+                        title: "Patient called",
+                        description: "This token is now being served.",
+                      },
+                    )
+                  }
+                />
+              ) : (
+                <QueueTabPanel
+                  entries={byStatus[activeTab]}
+                  allWaiting={byStatus.waiting}
+                  showSkip={activeTab === "waiting"}
+                  showRemove={activeTab !== "serving"}
+                  showForceServe={isAdmin && activeTab === "waiting"}
+                  busyId={busyId}
+                  onSkip={(id) => void handleSkip(id)}
+                  onRemove={(id) => void handleRemove(id)}
+                  onForceServe={(id) =>
+                    void runAction(
+                      id,
+                      () => queueService.forceServe(id, scope),
+                      {
+                        title: "Patient called",
+                        description: "This token is now being served.",
+                      },
+                    )
+                  }
+                />
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       <ServeNextDialog
         open={dialogOpen}

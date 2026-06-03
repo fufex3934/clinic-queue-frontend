@@ -385,7 +385,7 @@ export function PlatformDashboardAnalytics() {
               <UserCog className="size-4 text-primary" />
               <h3 className="font-medium">Clinic breakdown</h3>
             </div>
-            <Table>
+            <Table className="table-zebra">
               <TableHeader>
                 <TableRow>
                   <TableHead>Clinic</TableHead>

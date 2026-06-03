@@ -11,6 +11,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { getPatientName, getPatientPhone } from "@/lib/patient";
+import { cn } from "@/lib/utils";
 import type { QueueEntry } from "@/types";
 import { QueueReorderControls } from "./queue-reorder-controls";
 import { QueueStatusBadge } from "./queue-status-badge";
@@ -44,7 +45,7 @@ export function QueueTabPanel({
 }: QueueTabPanelProps) {
   if (entries.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
+      <p className="py-12 text-center text-sm text-muted-foreground">
         No entries in this section
       </p>
     );
@@ -54,10 +55,10 @@ export function QueueTabPanel({
     showSkip || showRemove || showForceServe || showReorder;
 
   return (
-    <Table>
+    <Table className="table-zebra">
       <TableHeader>
-        <TableRow>
-          <TableHead>Token</TableHead>
+        <TableRow className="hover:bg-transparent">
+          <TableHead className="w-24">Token</TableHead>
           <TableHead>Patient</TableHead>
           <TableHead className="hidden sm:table-cell">Phone</TableHead>
           <TableHead>Status</TableHead>
@@ -68,9 +69,12 @@ export function QueueTabPanel({
         {entries.map((entry) => (
           <TableRow
             key={entry._id}
-            className={entry.status === "skipped" ? "bg-muted/40" : undefined}
+            className={cn(
+              entry.status === "skipped" && "opacity-80",
+              entry.status === "done" && "text-muted-foreground",
+            )}
           >
-            <TableCell className="font-mono font-semibold tabular-nums">
+            <TableCell className="font-mono text-base font-bold tabular-nums">
               #{entry.tokenNumber}
             </TableCell>
             <TableCell className="font-medium">
@@ -112,7 +116,6 @@ export function QueueTabPanel({
                     onForceServe && (
                       <Button
                         size="sm"
-                        variant="secondary"
                         disabled={busyId === entry._id}
                         onClick={() => onForceServe(entry._id)}
                       >

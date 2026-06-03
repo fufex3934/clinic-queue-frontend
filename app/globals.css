@@ -39,6 +39,16 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
+  --color-surface: var(--surface);
+  --color-surface-raised: var(--surface-raised);
+  --color-status-waiting: var(--status-waiting);
+  --color-status-waiting-foreground: var(--status-waiting-foreground);
+  --color-status-serving: var(--status-serving);
+  --color-status-serving-foreground: var(--status-serving-foreground);
+  --color-status-completed: var(--status-completed);
+  --color-status-completed-foreground: var(--status-completed-foreground);
+  --color-status-cancelled: var(--status-cancelled);
+  --color-status-cancelled-foreground: var(--status-cancelled-foreground);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -46,75 +56,118 @@
   --radius-2xl: calc(var(--radius) * 1.8);
   --radius-3xl: calc(var(--radius) * 2.2);
   --radius-4xl: calc(var(--radius) * 2.6);
+  --shadow-elevation-sm: var(--shadow-sm);
+  --shadow-elevation-md: var(--shadow-md);
+  --shadow-elevation-lg: var(--shadow-lg);
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.52 0.11 195);
-  --primary-foreground: oklch(0.99 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  /* Healthcare teal/cyan primary */
+  --background: oklch(0.99 0.004 200);
+  --foreground: oklch(0.2 0.02 220);
+  --card: oklch(1 0.002 200);
+  --card-foreground: oklch(0.2 0.02 220);
+  --popover: oklch(1 0.002 200);
+  --popover-foreground: oklch(0.2 0.02 220);
+  --primary: oklch(0.52 0.12 195);
+  --primary-foreground: oklch(0.99 0.01 195);
+  --secondary: oklch(0.96 0.012 200);
+  --secondary-foreground: oklch(0.28 0.03 220);
+  --muted: oklch(0.965 0.008 200);
+  --muted-foreground: oklch(0.5 0.02 220);
+  --accent: oklch(0.94 0.03 195);
+  --accent-foreground: oklch(0.32 0.06 195);
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.91 0.012 200);
+  --input: oklch(0.91 0.012 200);
+  --ring: oklch(0.52 0.12 195);
+  --surface: oklch(0.98 0.006 200);
+  --surface-raised: oklch(1 0.002 200);
+
+  /* Queue / appointment semantic status */
+  --status-waiting: oklch(0.94 0.04 85);
+  --status-waiting-foreground: oklch(0.42 0.1 75);
+  --status-serving: oklch(0.52 0.12 195);
+  --status-serving-foreground: oklch(0.99 0.01 195);
+  --status-completed: oklch(0.94 0.04 155);
+  --status-completed-foreground: oklch(0.38 0.1 155);
+  --status-cancelled: oklch(0.95 0.02 25);
+  --status-cancelled-foreground: oklch(0.45 0.12 25);
+
+  /* Charts — teal-forward palette */
+  --chart-1: oklch(0.52 0.12 195);
+  --chart-2: oklch(0.62 0.1 175);
+  --chart-3: oklch(0.68 0.08 145);
+  --chart-4: oklch(0.58 0.1 250);
+  --chart-5: oklch(0.72 0.06 85);
+
+  --radius: 0.75rem;
+
+  /* Elevation */
+  --shadow-sm: 0 1px 2px oklch(0.2 0.02 220 / 0.06);
+  --shadow-md: 0 4px 12px oklch(0.2 0.02 220 / 0.08);
+  --shadow-lg: 0 12px 32px oklch(0.2 0.02 220 / 0.1);
+
+  /* Sidebar — deep teal slate */
+  --sidebar: oklch(0.22 0.04 220);
+  --sidebar-foreground: oklch(0.94 0.01 200);
+  --sidebar-primary: oklch(0.58 0.11 195);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.28 0.045 220);
+  --sidebar-accent-foreground: oklch(0.96 0.01 200);
+  --sidebar-border: oklch(0.32 0.04 220);
+  --sidebar-ring: oklch(0.58 0.11 195);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --background: oklch(0.16 0.02 220);
+  --foreground: oklch(0.96 0.01 200);
+  --card: oklch(0.2 0.025 220);
+  --card-foreground: oklch(0.96 0.01 200);
+  --popover: oklch(0.2 0.025 220);
+  --popover-foreground: oklch(0.96 0.01 200);
+  --primary: oklch(0.68 0.11 195);
+  --primary-foreground: oklch(0.18 0.03 220);
+  --secondary: oklch(0.26 0.03 220);
+  --secondary-foreground: oklch(0.94 0.01 200);
+  --muted: oklch(0.26 0.03 220);
+  --muted-foreground: oklch(0.68 0.02 200);
+  --accent: oklch(0.28 0.05 195);
+  --accent-foreground: oklch(0.92 0.02 195);
+  --destructive: oklch(0.65 0.18 25);
+  --border: oklch(0.32 0.03 220);
+  --input: oklch(0.32 0.03 220);
+  --ring: oklch(0.68 0.11 195);
+  --surface: oklch(0.18 0.025 220);
+  --surface-raised: oklch(0.22 0.03 220);
+
+  --status-waiting: oklch(0.32 0.06 85);
+  --status-waiting-foreground: oklch(0.88 0.06 85);
+  --status-serving: oklch(0.55 0.11 195);
+  --status-serving-foreground: oklch(0.98 0.01 195);
+  --status-completed: oklch(0.32 0.06 155);
+  --status-completed-foreground: oklch(0.88 0.05 155);
+  --status-cancelled: oklch(0.3 0.05 25);
+  --status-cancelled-foreground: oklch(0.88 0.04 25);
+
+  --chart-1: oklch(0.68 0.11 195);
+  --chart-2: oklch(0.72 0.09 175);
+  --chart-3: oklch(0.75 0.07 145);
+  --chart-4: oklch(0.65 0.1 250);
+  --chart-5: oklch(0.78 0.06 85);
+
+  --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.2);
+  --shadow-md: 0 4px 16px oklch(0 0 0 / 0.25);
+  --shadow-lg: 0 12px 40px oklch(0 0 0 / 0.35);
+
+  --sidebar: oklch(0.14 0.025 220);
+  --sidebar-foreground: oklch(0.94 0.01 200);
+  --sidebar-primary: oklch(0.62 0.11 195);
+  --sidebar-primary-foreground: oklch(0.99 0 0);
+  --sidebar-accent: oklch(0.22 0.035 220);
+  --sidebar-accent-foreground: oklch(0.96 0.01 200);
+  --sidebar-border: oklch(0.28 0.03 220);
+  --sidebar-ring: oklch(0.62 0.11 195);
 }
 
 @layer base {
@@ -122,23 +175,107 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground antialiased;
   }
   html {
-    @apply font-sans;
+    @apply font-sans scroll-smooth;
   }
 }
 
-/* Sonner — light clinic-style toasts (no dark/richColors backgrounds) */
+/* ——— Design system utilities ——— */
+
+@layer utilities {
+  .surface-panel {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .surface-elevated {
+    background-color: var(--surface-raised);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-md);
+  }
+
+  .gradient-brand {
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklch, var(--primary) 14%, transparent) 0%,
+      color-mix(in oklch, var(--accent) 10%, transparent) 50%,
+      var(--background) 100%
+    );
+  }
+
+  .gradient-hero {
+    background: linear-gradient(
+      160deg,
+      color-mix(in oklch, var(--primary) 12%, transparent) 0%,
+      var(--background) 50%,
+      color-mix(in oklch, var(--accent) 8%, transparent) 100%
+    );
+  }
+
+  .border-subtle {
+    border-color: color-mix(in oklch, var(--border) 70%, transparent);
+  }
+
+  .shadow-elevation-sm {
+    box-shadow: var(--shadow-sm);
+  }
+
+  .shadow-elevation-md {
+    box-shadow: var(--shadow-md);
+  }
+
+  .shadow-elevation-lg {
+    box-shadow: var(--shadow-lg);
+  }
+
+  .status-waiting {
+    background-color: var(--status-waiting);
+    color: var(--status-waiting-foreground);
+  }
+
+  .status-serving {
+    background-color: var(--status-serving);
+    color: var(--status-serving-foreground);
+  }
+
+  .status-completed {
+    background-color: var(--status-completed);
+    color: var(--status-completed-foreground);
+  }
+
+  .status-cancelled {
+    background-color: var(--status-cancelled);
+    color: var(--status-cancelled-foreground);
+  }
+
+  .table-zebra tbody tr:nth-child(even) {
+    background-color: color-mix(in oklch, var(--muted) 40%, transparent);
+  }
+}
+
+/* Sonner — clinic-themed toasts */
 [data-sonner-toaster] {
   --normal-bg: var(--card);
   --normal-border: var(--border);
   --normal-text: var(--foreground);
+  --success-bg: var(--card);
+  --success-border: var(--status-completed);
+  --success-text: var(--foreground);
+  --error-bg: var(--card);
+  --error-border: var(--destructive);
+  --error-text: var(--foreground);
   font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 [data-sonner-toaster] [data-sonner-toast] {
   pointer-events: auto;
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius-lg);
 }
 
 [data-sonner-toaster] [data-sonner-toast] [data-close-button] {

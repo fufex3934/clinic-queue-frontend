@@ -3,11 +3,13 @@
 import {
   DndContext,
   closestCenter,
+  DragOverlay,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
 import {
   SortableContext,
@@ -17,13 +19,15 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useState } from "react";
 import { GripVertical, SkipForward, Play, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { getPatientName, getPatientPhone } from "@/lib/patient";
+import { cn } from "@/lib/utils";
 import type { QueueEntry } from "@/types";
 import { QueueStatusBadge } from "./queue-status-badge";
 
-function SortableRow({
+function WaitingCard({
   entry,
   busyId,
   showSkip,
@@ -32,6 +36,9 @@ function SortableRow({
   onSkip,
   onForceServe,
   onRemove,
+  dragHandleProps,
+  isDragging,
+  isOverlay,
 }: {
   entry: QueueEntry;
   busyId: string | null;
@@ -41,7 +48,88 @@ function SortableRow({
   onSkip?: (id: string) => void;
   onForceServe?: (id: string) => void;
   onRemove?: (id: string) => void;
+  dragHandleProps?: React.HTMLAttributes<HTMLButtonElement>;
+  isDragging?: boolean;
+  isOverlay?: boolean;
 }) {
+  const isNext = entry.status === "waiting";
+
+  return (
+    <div
+      className={cn(
+        "flex flex-col gap-3 rounded-xl border bg-card p-4 transition-all sm:flex-row sm:items-center",
+        isDragging && "opacity-50",
+        isOverlay && "shadow-elevation-lg ring-2 ring-primary",
+        isNext && !isOverlay && "border-primary/30 bg-primary/5",
+      )}
+    >
+      <div className="flex min-w-0 flex-1 items-center gap-3">
+        <button
+          type="button"
+          className="flex size-9 shrink-0 cursor-grab touch-none items-center justify-center rounded-lg border border-subtle bg-muted/50 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground active:cursor-grabbing"
+          aria-label={`Drag to reorder token ${entry.tokenNumber}`}
+          {...dragHandleProps}
+        >
+          <GripVertical className="size-4" />
+        </button>
+        <div className="flex size-14 shrink-0 items-center justify-center rounded-xl bg-status-waiting font-bold tabular-nums text-status-waiting-foreground text-xl">
+          #{entry.tokenNumber}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-base font-semibold">
+            {getPatientName(entry.patientId)}
+          </p>
+          <p className="truncate text-sm text-muted-foreground">
+            {getPatientPhone(entry.patientId)}
+          </p>
+        </div>
+        <QueueStatusBadge status={entry.status} className="hidden sm:inline-flex" />
+      </div>
+      <div className="flex flex-wrap items-center justify-end gap-2 border-t border-subtle pt-3 sm:border-0 sm:pt-0">
+        <QueueStatusBadge status={entry.status} className="sm:hidden" />
+        {showSkip && onSkip && (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={busyId === entry._id}
+            onClick={() => onSkip(entry._id)}
+          >
+            <SkipForward className="mr-1 size-3" />
+            Skip
+          </Button>
+        )}
+        {showForceServe && onForceServe && (
+          <Button
+            size="sm"
+            disabled={busyId === entry._id}
+            onClick={() => onForceServe(entry._id)}
+          >
+            <Play className="mr-1 size-3" />
+            Serve
+          </Button>
+        )}
+        {showRemove && onRemove && (
+          <Button
+            size="sm"
+            variant="ghost"
+            disabled={busyId === entry._id}
+            onClick={() => onRemove(entry._id)}
+            aria-label="Remove from queue"
+          >
+            <Trash2 className="size-4" />
+          </Button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function SortableWaitingCard(
+  props: Omit<
+    React.ComponentProps<typeof WaitingCard>,
+    "dragHandleProps" | "isDragging" | "isOverlay"
+  > & { entry: QueueEntry },
+) {
   const {
     attributes,
     listeners,
@@ -49,72 +137,21 @@ function SortableRow({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: entry._id });
+  } = useSortable({ id: props.entry._id });
 
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.6 : 1,
   };
 
   return (
-    <tr ref={setNodeRef} style={style} className="border-b">
-      <td className="p-2 w-8">
-        <button
-          type="button"
-          className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
-          aria-label="Drag to reorder"
-          {...attributes}
-          {...listeners}
-        >
-          <GripVertical className="size-4" />
-        </button>
-      </td>
-      <td className="p-2 font-mono font-semibold tabular-nums">#{entry.tokenNumber}</td>
-      <td className="p-2 font-medium">{getPatientName(entry.patientId)}</td>
-      <td className="hidden p-2 sm:table-cell text-muted-foreground">
-        {getPatientPhone(entry.patientId)}
-      </td>
-      <td className="p-2">
-        <QueueStatusBadge status={entry.status} />
-      </td>
-      <td className="p-2 text-right">
-        <div className="flex justify-end gap-1">
-          {showSkip && onSkip && (
-            <Button
-              size="sm"
-              variant="outline"
-              disabled={busyId === entry._id}
-              onClick={() => onSkip(entry._id)}
-            >
-              <SkipForward className="mr-1 size-3" />
-              Skip
-            </Button>
-          )}
-          {showForceServe && onForceServe && (
-            <Button
-              size="sm"
-              variant="secondary"
-              disabled={busyId === entry._id}
-              onClick={() => onForceServe(entry._id)}
-            >
-              <Play className="mr-1 size-3" />
-              Serve
-            </Button>
-          )}
-          {showRemove && onRemove && (
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={busyId === entry._id}
-              onClick={() => onRemove(entry._id)}
-            >
-              <Trash2 className="size-3" />
-            </Button>
-          )}
-        </div>
-      </td>
-    </tr>
+    <div ref={setNodeRef} style={style}>
+      <WaitingCard
+        {...props}
+        isDragging={isDragging}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
   );
 }
 
@@ -141,14 +178,20 @@ export function QueueDraggableWaiting({
   showForceServe,
   showRemove,
 }: QueueDraggableWaitingProps) {
+  const [activeId, setActiveId] = useState<string | null>(null);
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
 
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveId(String(event.active.id));
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
+    setActiveId(null);
     const { active, over } = event;
     if (!over || active.id === over.id) return;
 
@@ -162,37 +205,30 @@ export function QueueDraggableWaiting({
 
   if (entries.length === 0) {
     return (
-      <p className="py-8 text-center text-sm text-muted-foreground">
-        No entries in this section
+      <p className="py-12 text-center text-sm text-muted-foreground">
+        No patients waiting — add walk-ins or serve the next token.
       </p>
     );
   }
+
+  const activeEntry = entries.find((e) => e._id === activeId);
 
   return (
     <DndContext
       sensors={sensors}
       collisionDetection={closestCenter}
+      onDragStart={handleDragStart}
       onDragEnd={(e) => void handleDragEnd(e)}
+      onDragCancel={() => setActiveId(null)}
     >
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b text-left text-muted-foreground">
-            <th className="p-2 w-8" />
-            <th className="p-2">Token</th>
-            <th className="p-2">Patient</th>
-            <th className="hidden p-2 sm:table-cell">Phone</th>
-            <th className="p-2">Status</th>
-            <th className="p-2 text-right">Actions</th>
-          </tr>
-        </thead>
-        <SortableContext
-          items={entries.map((e) => e._id)}
-          strategy={verticalListSortingStrategy}
-        >
-          <tbody>
-            {entries.map((entry) => (
-              <SortableRow
-                key={entry._id}
+      <SortableContext
+        items={entries.map((e) => e._id)}
+        strategy={verticalListSortingStrategy}
+      >
+        <ul className="space-y-3" role="list" aria-label="Waiting queue">
+          {entries.map((entry, index) => (
+            <li key={entry._id}>
+              <SortableWaitingCard
                 entry={entry}
                 busyId={busyId}
                 showSkip={showSkip}
@@ -202,12 +238,29 @@ export function QueueDraggableWaiting({
                 onForceServe={onForceServe}
                 onRemove={onRemove}
               />
-            ))}
-          </tbody>
-        </SortableContext>
-      </table>
-      <p className="mt-2 text-xs text-muted-foreground">
-        Drag rows to reorder the waiting queue
+              {index === 0 && (
+                <p className="mt-1 px-1 text-xs font-medium text-primary">
+                  Next in line
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      </SortableContext>
+      <DragOverlay dropAnimation={{ duration: 180 }}>
+        {activeEntry ? (
+          <WaitingCard
+            entry={activeEntry}
+            busyId={busyId}
+            isOverlay
+            showSkip={showSkip}
+            showForceServe={showForceServe}
+            showRemove={showRemove}
+          />
+        ) : null}
+      </DragOverlay>
+      <p className="mt-4 text-xs text-muted-foreground">
+        Drag cards to reorder the waiting line. Changes save automatically.
       </p>
     </DndContext>
   );

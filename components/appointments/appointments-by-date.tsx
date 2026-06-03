@@ -298,7 +298,7 @@ export function AppointmentsByDate() {
                           {count}/{maxAppointmentsPerSlot} booked
                         </span>
                       </h3>
-                      <Table>
+                      <Table className="table-zebra">
                         <TableHeader>
                           <TableRow>
                             <TableHead>Patient</TableHead>

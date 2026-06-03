@@ -17,7 +17,7 @@ export function Problem() {
         </h2>
         <div className="mt-8 grid gap-4 sm:grid-cols-2">
           {painPoints.map(({ icon: Icon, text }) => (
-            <Card key={text} className="border-border/70 shadow-sm">
+            <Card key={text} className="border-subtle shadow-elevation-sm transition-shadow hover:shadow-elevation-md">
               <CardHeader className="pb-1">
                 <CardTitle className="flex items-center gap-3 text-base">
                   <span className="rounded-lg bg-destructive/10 p-2 text-destructive">

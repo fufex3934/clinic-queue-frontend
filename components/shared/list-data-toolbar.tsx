@@ -10,8 +10,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 export type SortOption = { value: string; label: string };
+
+const selectClass =
+  "flex h-9 min-w-0 rounded-lg border border-input bg-card px-2.5 text-sm shadow-elevation-sm transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/40";
 
 type ListDataToolbarProps = {
   search: string;
@@ -56,17 +60,20 @@ export function ListDataToolbar({
   const to = Math.min(page * (limit ?? 20), total);
 
   return (
-    <div className="space-y-3">
+    <div className="surface-panel space-y-4 p-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-end">
         {showSearch && (
           <div className="relative min-w-[12rem] flex-1">
-            <Search className="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Search
+              className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden
+            />
             <Input
               type="search"
               placeholder={searchPlaceholder}
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              className="pl-9"
+              className="h-10 rounded-lg border-subtle bg-card pl-10 shadow-elevation-sm"
               aria-label="Search list"
             />
           </div>
@@ -78,7 +85,7 @@ export function ListDataToolbar({
             </Label>
             <select
               id="list-sort-by"
-              className="flex h-9 min-w-[8.5rem] rounded-md border border-input bg-transparent px-2 text-sm"
+              className={cn(selectClass, "min-w-[8.5rem]")}
               value={sortBy}
               onChange={(e) => onSortByChange(e.target.value)}
             >
@@ -95,7 +102,7 @@ export function ListDataToolbar({
             </Label>
             <select
               id="list-sort-order"
-              className="flex h-9 min-w-[6.5rem] rounded-md border border-input bg-transparent px-2 text-sm"
+              className={cn(selectClass, "min-w-[6.5rem]")}
               value={sortOrder}
               onChange={(e) =>
                 onSortOrderChange(e.target.value as "asc" | "desc")
@@ -112,7 +119,7 @@ export function ListDataToolbar({
               </Label>
               <select
                 id="list-page-size"
-                className="flex h-9 min-w-[4.5rem] rounded-md border border-input bg-transparent px-2 text-sm"
+                className={cn(selectClass, "min-w-[4.5rem]")}
                 value={limit}
                 onChange={(e) => onLimitChange(Number(e.target.value))}
               >
@@ -128,11 +135,9 @@ export function ListDataToolbar({
         {children}
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-subtle pt-3 text-sm text-muted-foreground">
         <span>
-          {total === 0
-            ? "No results"
-            : `Showing ${from}–${to} of ${total}`}
+          {total === 0 ? "No results" : `Showing ${from}–${to} of ${total}`}
         </span>
         <div className="flex items-center gap-1">
           <Button
@@ -157,8 +162,8 @@ export function ListDataToolbar({
           >
             <ChevronLeft className="size-4" />
           </Button>
-          <span className="min-w-[5rem] text-center text-foreground">
-            Page {page} of {totalPages}
+          <span className="min-w-[5rem] text-center font-medium text-foreground tabular-nums">
+            {page} / {totalPages}
           </span>
           <Button
             type="button"

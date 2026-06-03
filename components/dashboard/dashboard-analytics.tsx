@@ -20,7 +20,6 @@ import {
   Legend,
   Pie,
   PieChart,
-  ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
@@ -29,6 +28,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   AnalyticsSkeleton,
   ChartCard,
+  ChartPlot,
   EmptyChart,
   KpiCard,
 } from "@/components/dashboard/dashboard-chart-parts";
@@ -226,7 +226,7 @@ export function DashboardAnalytics() {
             description="Total tokens issued vs completed per day"
           >
             {hasQueueTrend ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ChartPlot>
                 <AreaChart data={stats.queueLast7Days} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <defs>
                     <linearGradient id="queueTotalFill" x1="0" y1="0" x2="0" y2="1">
@@ -260,7 +260,7 @@ export function DashboardAnalytics() {
                     strokeWidth={2}
                   />
                 </AreaChart>
-              </ResponsiveContainer>
+              </ChartPlot>
             ) : (
               <EmptyChart message="No queue activity in the last 7 days" />
             )}
@@ -273,7 +273,7 @@ export function DashboardAnalytics() {
             description="Bookings per day with arrivals and cancellations"
           >
             {hasApptTrend ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ChartPlot>
                 <BarChart data={stats.appointmentsLast7Days} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} vertical={false} />
                   <XAxis dataKey="label" tick={chartAxisTick} axisLine={false} tickLine={false} />
@@ -284,7 +284,7 @@ export function DashboardAnalytics() {
                   <Bar dataKey="arrived" name="Arrived" fill={SERIES_PALETTE[2]} radius={[4, 4, 0, 0]} />
                   <Bar dataKey="cancelled" name="Cancelled" fill={SERIES_PALETTE[4]} radius={[4, 4, 0, 0]} />
                 </BarChart>
-              </ResponsiveContainer>
+              </ChartPlot>
             ) : (
               <EmptyChart message="No appointments in the last 7 days" />
             )}
@@ -300,7 +300,7 @@ export function DashboardAnalytics() {
             className="xl:col-span-1"
           >
             {queuePieData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
+              <ChartPlot>
                 <PieChart>
                   <Pie
                     data={queuePieData}
@@ -319,7 +319,7 @@ export function DashboardAnalytics() {
                   <Tooltip contentStyle={chartTooltipStyle.contentStyle} />
                   <Legend wrapperStyle={{ fontSize: 12 }} />
                 </PieChart>
-              </ResponsiveContainer>
+              </ChartPlot>
             ) : (
               <EmptyChart message="No queue entries today yet" />
             )}
@@ -333,7 +333,7 @@ export function DashboardAnalytics() {
               description="How today&apos;s bookings are progressing"
             >
               {appointmentPieData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartPlot>
                   <PieChart>
                     <Pie
                       data={appointmentPieData}
@@ -352,7 +352,7 @@ export function DashboardAnalytics() {
                     <Tooltip contentStyle={chartTooltipStyle.contentStyle} />
                     <Legend wrapperStyle={{ fontSize: 12 }} />
                   </PieChart>
-                </ResponsiveContainer>
+                </ChartPlot>
               ) : (
                 <EmptyChart message="No appointments scheduled for today" />
               )}
@@ -363,7 +363,7 @@ export function DashboardAnalytics() {
               description="Appointment volume by time slot"
             >
               {stats.peakHoursToday.some((s) => s.count > 0) ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartPlot>
                   <BarChart data={stats.peakHoursToday}>
                     <CartesianGrid strokeDasharray="3 3" stroke={chartGridStroke} vertical={false} />
                     <XAxis dataKey="slot" tick={chartAxisTick} axisLine={false} tickLine={false} />
@@ -371,7 +371,7 @@ export function DashboardAnalytics() {
                     <Tooltip contentStyle={chartTooltipStyle.contentStyle} />
                     <Bar dataKey="count" name="Appointments" fill={CHART_COLORS.primary} radius={[4, 4, 0, 0]} />
                   </BarChart>
-                </ResponsiveContainer>
+                </ChartPlot>
               ) : (
                 <EmptyChart message="No appointments today" />
               )}
@@ -383,7 +383,7 @@ export function DashboardAnalytics() {
               className="md:col-span-2 xl:col-span-1"
             >
               {slotChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height="100%">
+                <ChartPlot>
                   <BarChart
                     data={slotChartData}
                     layout="vertical"
@@ -404,7 +404,7 @@ export function DashboardAnalytics() {
                     <Bar dataKey="booked" name="Booked" stackId="slot" fill={CHART_COLORS.primary} radius={[0, 0, 0, 0]} />
                     <Bar dataKey="remaining" name="Available" stackId="slot" fill={CHART_COLORS.chart2} radius={[0, 4, 4, 0]} />
                   </BarChart>
-                </ResponsiveContainer>
+                </ChartPlot>
               ) : (
                 <EmptyChart message="No slots booked today" />
               )}

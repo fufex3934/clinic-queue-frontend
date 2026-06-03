@@ -511,7 +511,7 @@ export function PlatformPaymentsDashboard() {
               No payment requests match your filters
             </p>
           ) : (
-            <Table>
+            <Table className="table-zebra">
               <TableHeader>
                 <TableRow>
                   <TableHead>Clinic</TableHead>

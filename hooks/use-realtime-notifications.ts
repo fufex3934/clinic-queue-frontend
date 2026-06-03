@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { io, type Socket } from "socket.io-client";
 import { getStoredAccessToken } from "@/lib/auth/token-storage";
+import { teardownRealtimeSocket } from "@/lib/realtime-socket";
 import { useNotifications } from "@/contexts/notifications-provider";
 import { notifyInfo, notifySuccess, notifyWarning } from "@/lib/toast";
 import { useAuth } from "@/contexts/auth-provider";
@@ -187,12 +188,7 @@ export function useRealtimeNotifications(enabled = true): void {
     socket.on("appointment.updated", onAppointmentUpdated);
 
     return () => {
-      socket.off("payment.updated", onPaymentUpdated);
-      socket.off("queue.updated", onQueueActivity);
-      socket.off("queue.added", onQueueActivity);
-      socket.off("queue.served", onQueueActivity);
-      socket.off("appointment.updated", onAppointmentUpdated);
-      socket.disconnect();
+      teardownRealtimeSocket(socket);
     };
   }, [enabled, user, router]);
 }

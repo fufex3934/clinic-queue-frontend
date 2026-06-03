@@ -471,7 +471,7 @@ export function ClinicAdministration({
                     description="Create a clinic to onboard tenants."
                   />
                 ) : (
-                  <Table>
+                  <Table className="table-zebra">
                     <TableHeader>
                       <TableRow>
                         <TableHead>Name</TableHead>

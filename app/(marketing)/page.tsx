@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 
 export default function MarketingPage() {
   return (
-    <div className="scroll-smooth bg-background text-foreground">
+    <div className="scroll-smooth bg-background text-foreground antialiased">
       <Navbar />
       <main>
         <Hero />
