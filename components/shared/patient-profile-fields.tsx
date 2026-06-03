@@ -2,6 +2,8 @@
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useLocale } from "@/contexts/locale-provider";
+import { ETHIOPIA_PHONE_PLACEHOLDER } from "@/lib/phone";
 import { PATIENT_GENDER_OPTIONS } from "@/lib/patient";
 import type { PatientGender } from "@/types/patient";
 
@@ -55,17 +57,18 @@ export function PatientProfileFields({
   onChange,
   disabled,
 }: PatientProfileFieldsProps) {
+  const { translate } = useLocale();
   const set = (patch: Partial<PatientProfileFormState>) =>
     onChange({ ...profile, ...patch });
 
   return (
     <div className="space-y-4 border-t border-border pt-4">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Optional profile
+        {translate("optionalProfile")}
       </p>
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor={`${idPrefix}-dob`}>Date of birth</Label>
+          <Label htmlFor={`${idPrefix}-dob`}>{translate("dateOfBirth")}</Label>
           <Input
             id={`${idPrefix}-dob`}
             type="date"
@@ -76,7 +79,7 @@ export function PatientProfileFields({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor={`${idPrefix}-gender`}>Gender</Label>
+          <Label htmlFor={`${idPrefix}-gender`}>{translate("gender")}</Label>
           <select
             id={`${idPrefix}-gender`}
             className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
@@ -86,7 +89,7 @@ export function PatientProfileFields({
             }
             disabled={disabled}
           >
-            <option value="">Not specified</option>
+            <option value="">{translate("genderNotSpecified")}</option>
             {PATIENT_GENDER_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
                 {o.label}
@@ -96,17 +99,19 @@ export function PatientProfileFields({
         </div>
       </div>
       <div className="space-y-2">
-        <Label htmlFor={`${idPrefix}-secondary-phone`}>Secondary phone</Label>
+        <Label htmlFor={`${idPrefix}-secondary-phone`}>
+          {translate("secondaryPhone")}
+        </Label>
         <Input
           id={`${idPrefix}-secondary-phone`}
           value={profile.secondaryPhone}
           onChange={(e) => set({ secondaryPhone: e.target.value })}
           disabled={disabled}
-          placeholder="Emergency / family contact"
+          placeholder={ETHIOPIA_PHONE_PLACEHOLDER}
         />
       </div>
       <div className="space-y-2">
-        <Label htmlFor={`${idPrefix}-notes`}>Reception notes</Label>
+        <Label htmlFor={`${idPrefix}-notes`}>{translate("receptionNotes")}</Label>
         <textarea
           id={`${idPrefix}-notes`}
           className="flex min-h-[72px] w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm"

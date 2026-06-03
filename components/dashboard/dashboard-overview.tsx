@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { Building2, CalendarDays, ListOrdered, Users, ArrowRight } from "lucide-react";
 import { useAuth } from "@/contexts/auth-provider";
+import { useLocale } from "@/contexts/locale-provider";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -14,6 +15,7 @@ import {
 import { PlatformClinicSelector } from "@/components/admin/platform-clinic-selector";
 import { DashboardStatsPanel } from "@/components/dashboard/dashboard-stats-panel";
 import { PageHeader } from "@/components/shared/page-header";
+import type { MessageKey } from "@/lib/i18n/catalog/en";
 import { canAccessFeature } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import type { AppFeature } from "@/lib/permissions";
@@ -22,70 +24,83 @@ import type { UserRole } from "@/types/auth";
 const overviewCards: {
   feature: AppFeature;
   href: string;
-  title: string;
-  description: string;
+  titleKey: MessageKey;
+  descriptionKey: MessageKey;
+  ctaKey: MessageKey;
   icon: typeof Users;
-  cta: string;
   accent?: boolean;
 }[] = [
   {
     feature: "patients",
     href: "/dashboard/patients",
-    title: "Patients",
-    description: "Register patients and search by name or phone.",
+    titleKey: "cardPatientsTitle",
+    descriptionKey: "cardPatientsDesc",
+    ctaKey: "cardPatientsCta",
     icon: Users,
-    cta: "Manage patients",
+  },
+  {
+    feature: "queue",
+    href: "/dashboard/today",
+    titleKey: "cardTodayTitle",
+    descriptionKey: "cardTodayDesc",
+    ctaKey: "cardTodayCta",
+    icon: CalendarDays,
+    accent: true,
   },
   {
     feature: "queue",
     href: "/dashboard/queue",
-    title: "Queue",
-    description:
-      "Large-format serving display, waiting cards, and serve next.",
+    titleKey: "cardQueueTitle",
+    descriptionKey: "cardQueueDesc",
+    ctaKey: "cardQueueCta",
     icon: ListOrdered,
-    cta: "Open queue",
-    accent: true,
   },
   {
     feature: "appointments",
     href: "/dashboard/appointments",
-    title: "Appointments",
-    description: "Browse scheduled visits for any date, grouped by time slot.",
+    titleKey: "cardAppointmentsTitle",
+    descriptionKey: "cardAppointmentsDesc",
+    ctaKey: "cardAppointmentsCta",
     icon: CalendarDays,
-    cta: "View appointments",
   },
   {
     feature: "administration",
     href: "/dashboard/admin",
-    title: "Administration",
-    description: "Manage clinic settings and staff accounts.",
+    titleKey: "cardAdminTitle",
+    descriptionKey: "cardAdminDesc",
+    ctaKey: "cardAdminCta",
     icon: Building2,
-    cta: "Open administration",
   },
 ];
 
-const welcomeCopy: Record<UserRole, string> = {
-  receptionist:
-    "Your workspace for patients, queue, and appointments — optimized for the front desk.",
-  admin:
-    "Manage daily operations or open administration for clinic and staff settings.",
-  platform_admin:
-    "Manage clinic tenants under Administration. Operational tools are for clinic staff.",
+const welcomeKeys: Record<UserRole, MessageKey> = {
+  receptionist: "welcomeReceptionist",
+  admin: "welcomeAdmin",
+  platform_admin: "welcomePlatform",
 };
 
 export function DashboardOverview() {
   const { user } = useAuth();
+  const { translate } = useLocale();
   const role = user?.role;
 
   const visibleCards = overviewCards.filter((card) =>
     canAccessFeature(role, card.feature),
   );
 
+  const welcomeTitle = user?.name
+    ? translate("welcomeUser", { name: user.name.split(" ")[0] ?? user.name })
+    : translate("welcome");
+
   return (
     <div className="space-y-10">
       <PageHeader
-        title={user?.name ? `Welcome, ${user.name.split(" ")[0]}` : "Welcome"}
-        description={role ? welcomeCopy[role] : "Loading your workspace…"}
+        title={welcomeTitle}
+        description={
+          role
+            ? translate(welcomeKeys[role])
+            : translate("welcomeLoading")
+        }
       />
 
       {role !== "platform_admin" && <PlatformClinicSelector />}
@@ -94,16 +109,25 @@ export function DashboardOverview() {
 
       {visibleCards.length === 0 ? (
         <p className="text-sm text-muted-foreground">
-          No sections are available for your account. Contact an administrator.
+          {translate("noSectionsAvailable")}
         </p>
       ) : (
         <section className="space-y-4">
-          <h2 className="text-lg font-semibold tracking-tight">Quick actions</h2>
+          <h2 className="text-lg font-semibold tracking-tight">
+            {translate("quickActions")}
+          </h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {visibleCards.map(
-              ({ feature, href, title, description, icon: Icon, cta, accent }) => (
+              ({
+                href,
+                titleKey,
+                descriptionKey,
+                ctaKey,
+                icon: Icon,
+                accent,
+              }) => (
                 <Card
-                  key={feature}
+                  key={href}
                   className={cn(
                     "shadow-elevation-sm transition-all duration-200 hover:shadow-elevation-md",
                     accent && "border-primary/25 bg-primary/5",
@@ -121,13 +145,15 @@ export function DashboardOverview() {
                       >
                         <Icon className="size-5" />
                       </span>
-                      {title}
+                      {translate(titleKey)}
                     </CardTitle>
-                    <CardDescription>{description}</CardDescription>
+                    <CardDescription>
+                      {translate(descriptionKey)}
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <Button render={<Link href={href} />}>
-                      {cta}
+                      {translate(ctaKey)}
                       <ArrowRight className="ml-2 size-4" />
                     </Button>
                   </CardContent>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { ChevronRight, LogOut, Menu, UserCircle } from "lucide-react";
+import { LocaleSelect } from "@/components/shared/locale-select";
 import { NotificationBell } from "@/components/layout/notification-bell";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Button } from "@/components/ui/button";
@@ -14,13 +15,15 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useAuth } from "@/contexts/auth-provider";
-import { getPageMeta } from "@/lib/page-meta";
+import { useLocale } from "@/contexts/locale-provider";
+import { getTranslatedPageMeta } from "@/lib/i18n/page-meta-i18n";
 import { cn } from "@/lib/utils";
 
 export function DashboardHeader() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const meta = getPageMeta(pathname);
+  const { locale, translate } = useLocale();
+  const meta = getTranslatedPageMeta(pathname, locale);
 
   return (
     <header className="sticky top-0 z-20 border-b border-subtle bg-background/90 shadow-elevation-sm backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
@@ -81,8 +84,9 @@ export function DashboardHeader() {
           <span className="hidden max-w-[10rem] truncate text-sm text-muted-foreground lg:inline">
             {user?.name}
           </span>
+          <LocaleSelect />
           <NotificationBell />
-          <Button variant="ghost" size="icon" aria-label="Profile">
+          <Button variant="ghost" size="icon" aria-label={translate("profile")}>
             <UserCircle className="size-5" />
           </Button>
           <Button
@@ -92,13 +96,13 @@ export function DashboardHeader() {
             onClick={() => void logout()}
           >
             <LogOut className="mr-2 size-4" />
-            Log out
+            {translate("logOut")}
           </Button>
           <Button
             variant="outline"
             size="icon"
             className="sm:hidden"
-            aria-label="Log out"
+            aria-label={translate("logOut")}
             onClick={() => void logout()}
           >
             <LogOut className="size-4" />

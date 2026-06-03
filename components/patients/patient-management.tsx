@@ -34,6 +34,12 @@ import {
 import { useAuth } from "@/contexts/auth-provider";
 import { usePaginatedList } from "@/hooks/use-paginated-list";
 import { useOperationalScope } from "@/hooks/use-operational-scope";
+import {
+  ETHIOPIA_PHONE_HINT,
+  ETHIOPIA_PHONE_PLACEHOLDER,
+  normalizeEthiopianPhone,
+} from "@/lib/phone";
+import { useLocale } from "@/contexts/locale-provider";
 import { formatPatientAge, formatPatientGender } from "@/lib/patient";
 import { getErrorMessage } from "@/lib/errors";
 import { notifyError, notifySuccess } from "@/lib/toast";
@@ -43,6 +49,7 @@ import type { Patient } from "@/types";
 import type { ListQueryParams } from "@/types/pagination";
 
 export function PatientManagement() {
+  const { translate } = useLocale();
   const { user } = useAuth();
   const { scope, scopeKey, isScopeReady } = useOperationalScope();
   const canUseQueue = canAccessFeature(user?.role, "queue");
@@ -103,7 +110,7 @@ export function PatientManagement() {
         patientId,
         {
           name: editName.trim(),
-          phone: editPhone.trim(),
+          phone: normalizeEthiopianPhone(editPhone.trim()),
           ...patientProfilePayload(editProfile),
         },
         scope,
@@ -127,7 +134,7 @@ export function PatientManagement() {
       await patientService.create(
         {
           name: name.trim(),
-          phone: phone.trim(),
+          phone: normalizeEthiopianPhone(phone.trim()),
           ...patientProfilePayload(createProfile),
         },
         scope,
@@ -154,17 +161,17 @@ export function PatientManagement() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm text-muted-foreground">
-          Register walk-in patients for your clinic
+          {translate("patientsRegisterDesc")}
         </p>
         <Button variant="outline" size="sm" onClick={() => void reload()} disabled={loading}>
           <RefreshCw className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`} />
-          Refresh
+          {translate("refresh")}
         </Button>
       </div>
 
       {(error || formError) && (
         <ErrorAlert
-          title="Error"
+          title={translate("error")}
           message={error ?? formError ?? ""}
           onRetry={() => void reload()}
         />
@@ -175,14 +182,14 @@ export function PatientManagement() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-base">
               <UserPlus className="size-4" />
-              New patient
+              {translate("newPatient")}
             </CardTitle>
-            <CardDescription>Name and phone are required</CardDescription>
+            <CardDescription>{translate("namePhoneRequired")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleCreate} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="patient-name">Full name</Label>
+                <Label htmlFor="patient-name">{translate("fullName")}</Label>
                 <Input
                   id="patient-name"
                   value={name}
@@ -192,14 +199,17 @@ export function PatientManagement() {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="patient-phone">Primary phone</Label>
+                <Label htmlFor="patient-phone">{translate("primaryPhone")}</Label>
                 <Input
                   id="patient-phone"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   required
-                  placeholder="+1 555 0100"
+                  placeholder={ETHIOPIA_PHONE_PLACEHOLDER}
                 />
+                <p className="text-xs text-muted-foreground">
+                  {ETHIOPIA_PHONE_HINT}
+                </p>
               </div>
               <PatientProfileFields
                 idPrefix="new"
@@ -208,7 +218,7 @@ export function PatientManagement() {
                 disabled={saving}
               />
               <Button type="submit" className="w-full" disabled={saving}>
-                {saving ? "Saving…" : "Create patient"}
+                {saving ? translate("saving") : translate("createPatient")}
               </Button>
             </form>
           </CardContent>
@@ -216,21 +226,24 @@ export function PatientManagement() {
 
         <Card className="shadow-elevation-sm">
           <CardHeader>
-            <CardTitle className="text-base">Patient directory</CardTitle>
+            <CardTitle className="text-base">{translate("patientDirectory")}</CardTitle>
             <CardDescription>
-              {total} patient{total === 1 ? "" : "s"} in your clinic
+              {translate(
+                total === 1 ? "patientInClinic" : "patientsInClinic",
+                { count: total },
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <ListDataToolbar
               search={search}
               onSearchChange={setSearch}
-              searchPlaceholder="Search name, phone, notes…"
+              searchPlaceholder={translate("searchPatientsPlaceholder")}
               sortBy={sortBy}
               sortOptions={[
-                { value: "createdAt", label: "Date added" },
-                { value: "name", label: "Name" },
-                { value: "phone", label: "Phone" },
+                { value: "createdAt", label: translate("sortDateAdded") },
+                { value: "name", label: translate("sortName") },
+                { value: "phone", label: translate("sortPhone") },
               ]}
               onSortByChange={setSortBy}
               sortOrder={sortOrder}

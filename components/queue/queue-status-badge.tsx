@@ -1,4 +1,8 @@
+"use client";
+
 import { Clock, CheckCircle2, Play, SkipForward } from "lucide-react";
+import { useLocale } from "@/contexts/locale-provider";
+import { QUEUE_STATUS_MESSAGE_KEYS } from "@/lib/i18n/queue-status";
 import { cn } from "@/lib/utils";
 import { QUEUE_STATUS_STYLES } from "@/lib/status-theme";
 import type { QueueStatus } from "@/types";
@@ -19,6 +23,7 @@ export function QueueStatusBadge({
   className?: string;
   size?: "default" | "lg";
 }) {
+  const { translate } = useLocale();
   const styles = QUEUE_STATUS_STYLES[status];
   const Icon = icons[status];
 
@@ -32,7 +37,7 @@ export function QueueStatusBadge({
       )}
     >
       <Icon className={size === "lg" ? "size-4" : "size-3"} aria-hidden />
-      {styles.label}
+      {translate(QUEUE_STATUS_MESSAGE_KEYS[status])}
     </span>
   );
 }

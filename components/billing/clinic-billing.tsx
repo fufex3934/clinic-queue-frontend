@@ -18,6 +18,12 @@ import { ErrorAlert } from "@/components/shared/error-alert";
 import { getErrorMessage } from "@/lib/errors";
 import { ListDataToolbar } from "@/components/shared/list-data-toolbar";
 import {
+  formatDualCurrency,
+  formatPlanPriceEtb,
+  PLAN_USD,
+  TELEBIRR_PAYMENT_HINT,
+} from "@/lib/billing-local";
+import {
   daysUntilRenewLabel,
   formatRenewDate,
 } from "@/lib/subscription-renewal";
@@ -31,9 +37,9 @@ import {
 } from "@/services/paymentService";
 
 const PLANS: { id: SubscriptionPlan; label: string; price: number }[] = [
-  { id: "starter", label: "Starter", price: 29 },
-  { id: "professional", label: "Professional", price: 79 },
-  { id: "enterprise", label: "Enterprise", price: 199 },
+  { id: "starter", label: "Starter", price: PLAN_USD.starter },
+  { id: "professional", label: "Professional", price: PLAN_USD.professional },
+  { id: "enterprise", label: "Enterprise", price: PLAN_USD.enterprise },
 ];
 
 export function BillingPage() {
@@ -66,10 +72,10 @@ export function BillingPage() {
       const label =
         PLANS.find((p) => p.id === pendingPayment.plan)?.label ??
         pendingPayment.plan;
-      return `Pay $${pendingPayment.amount} — ${label} (monthly)`;
+      return `Pay ${formatDualCurrency(pendingPayment.amount)} — ${label} (monthly)`;
     }
     if (selectedPlan) {
-      return `Pay $${selectedPlan.price} — ${selectedPlan.label} (monthly)`;
+      return `Pay ${formatDualCurrency(selectedPlan.price)} — ${selectedPlan.label} (monthly)`;
     }
     return undefined;
   }, [pendingPayment, selectedPlan]);
@@ -161,7 +167,8 @@ export function BillingPage() {
       <header className="space-y-1 text-center sm:text-left">
         <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
         <p className="text-sm text-muted-foreground">
-          Scan to pay, then submit your request and upload proof
+          {TELEBIRR_PAYMENT_HINT} Scan the QR, then submit your request and upload
+          proof.
         </p>
       </header>
 
@@ -323,7 +330,8 @@ export function BillingPage() {
             >
               {PLANS.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.label} — ${p.price}/month
+                  {p.label} — {formatDualCurrency(p.price)} / month (
+                  {formatPlanPriceEtb(p.id)} guide)
                 </option>
               ))}
             </select>

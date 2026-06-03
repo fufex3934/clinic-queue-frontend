@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowRight, RefreshCw, Users } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, Monitor, RefreshCw, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -16,6 +17,8 @@ import { useRealtimeQueue } from "@/hooks/use-realtime-queue";
 import { useOperationalScope } from "@/hooks/use-operational-scope";
 import { useQueueLoader } from "@/hooks/use-queue-loader";
 import { useConfirm } from "@/contexts/confirm-dialog-provider";
+import { useLocale } from "@/contexts/locale-provider";
+import type { MessageKey } from "@/lib/i18n/catalog/en";
 import { getErrorMessage } from "@/lib/errors";
 import { notifyError, notifySuccess } from "@/lib/toast";
 import { cn } from "@/lib/utils";
@@ -31,15 +34,18 @@ import { ServeNextDialog } from "./serve-next-dialog";
 import { QueueDraggableWaiting } from "./queue-draggable-waiting";
 import { QueueTabPanel } from "./queue-tab-panel";
 
-const TABS: { key: QueueStatus; label: string }[] = [
-  { key: "waiting", label: "Waiting" },
-  { key: "serving", label: "Serving" },
-  { key: "done", label: "Done" },
-  { key: "skipped", label: "Skipped" },
-];
+const TAB_LABEL_KEYS: Record<QueueStatus, MessageKey> = {
+  waiting: "tabWaiting",
+  serving: "tabServing",
+  done: "tabDone",
+  skipped: "tabSkipped",
+};
+
+const TAB_STATUSES: QueueStatus[] = ["waiting", "serving", "done", "skipped"];
 
 export function QueueManagement() {
   const confirm = useConfirm();
+  const { translate } = useLocale();
   const { scope, scopeKey, operationalClinicId, isAdmin, isScopeReady, isPlatformView } =
     useOperationalScope();
   const { entries, loading, error, setError, loadQueue } = useQueueLoader(
@@ -153,7 +159,7 @@ export function QueueManagement() {
 
       {isPlatformView && !isScopeReady && (
         <p className="text-sm text-muted-foreground">
-          Select a clinic above to load the queue.
+          {translate("selectClinicPrompt")}
         </p>
       )}
 
@@ -161,19 +167,37 @@ export function QueueManagement() {
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Users className="size-4 shrink-0" aria-hidden />
           {loading ? (
-            "Updating queue…"
+            translate("updatingQueue")
           ) : (
             <>
               <span className="text-2xl font-bold tabular-nums text-foreground">
                 {waitingCount}
               </span>
               <span>
-                patient{waitingCount === 1 ? "" : "s"} waiting today
+                {translate(
+                  waitingCount === 1
+                    ? "patientWaitingSuffix"
+                    : "patientsWaitingSuffix",
+                )}
               </span>
             </>
           )}
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            render={
+              <Link
+                href="/dashboard/queue/display"
+                target="_blank"
+                rel="noopener noreferrer"
+              />
+            }
+          >
+            <Monitor className="mr-2 size-4" />
+            {translate("openTvMode")}
+          </Button>
           <AddToQueueDialog
             onAdded={() => void loadQueue({ silent: true })}
             disabled={loading || serving}
@@ -188,7 +212,7 @@ export function QueueManagement() {
             <RefreshCw
               className={cn("mr-2 size-4", loading && "animate-spin")}
             />
-            Refresh
+            {translate("refresh")}
           </Button>
           <Button
             size="lg"
@@ -197,14 +221,14 @@ export function QueueManagement() {
             disabled={loading || serving || waitingCount === 0}
           >
             <ArrowRight className="mr-2 size-5" />
-            Serve Next
+            {translate("serveNext")}
           </Button>
         </div>
       </div>
 
       {error && (
         <ErrorAlert
-          title="Queue unavailable"
+          title={translate("queueUnavailable")}
           message={error}
           onRetry={() => void loadQueue()}
         />
@@ -221,16 +245,14 @@ export function QueueManagement() {
 
           <Card className="shadow-elevation-sm">
             <CardHeader className="border-b border-subtle pb-4">
-              <CardTitle className="text-lg">Today&apos;s queue</CardTitle>
-              <CardDescription>
-                Waiting line, completed visits, and skipped tokens
-              </CardDescription>
+              <CardTitle className="text-lg">{translate("todaysQueue")}</CardTitle>
+              <CardDescription>{translate("todaysQueueDesc")}</CardDescription>
               <div
                 className="flex flex-wrap gap-1.5 pt-3"
                 role="tablist"
-                aria-label="Queue sections"
+                aria-label={translate("queueSectionsAria")}
               >
-                {TABS.map(({ key, label }) => (
+                {TAB_STATUSES.map((key) => (
                   <Button
                     key={key}
                     type="button"
@@ -240,7 +262,7 @@ export function QueueManagement() {
                     aria-selected={activeTab === key}
                     onClick={() => setActiveTab(key)}
                   >
-                    {label}
+                    {translate(TAB_LABEL_KEYS[key])}
                     <span
                       className={cn(
                         "ml-1.5 rounded-full px-1.5 py-0.5 text-xs tabular-nums",

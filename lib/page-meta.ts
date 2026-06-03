@@ -15,10 +15,24 @@ const PAGE_META: Record<string, PageMeta> = {
     description: "Register and search clinic patients",
     breadcrumbs: [{ label: "Dashboard", href: "/dashboard" }, { label: "Patients" }],
   },
+  "/dashboard/today": {
+    title: "Today",
+    description: "Appointments and walk-in queue for today",
+    breadcrumbs: [{ label: "Dashboard", href: "/dashboard" }, { label: "Today" }],
+  },
   "/dashboard/queue": {
     title: "Queue",
     description: "Serve patients and monitor today's waiting line",
     breadcrumbs: [{ label: "Dashboard", href: "/dashboard" }, { label: "Queue" }],
+  },
+  "/dashboard/queue/display": {
+    title: "Queue display",
+    description: "Fullscreen waiting-room board",
+    breadcrumbs: [
+      { label: "Dashboard", href: "/dashboard" },
+      { label: "Queue", href: "/dashboard/queue" },
+      { label: "Display" },
+    ],
   },
   "/dashboard/appointments": {
     title: "Appointments",

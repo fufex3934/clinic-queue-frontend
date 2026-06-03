@@ -14,6 +14,8 @@ import {
   Users,
 } from "lucide-react";
 import { useAuth } from "@/contexts/auth-provider";
+import { useLocale } from "@/contexts/locale-provider";
+import { navGroupLabelKey, navLabelKey } from "@/lib/i18n/nav";
 import { canAccessFeature, NAV_GROUPS, NAV_LINKS } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 import type { AppFeature } from "@/lib/permissions";
@@ -42,6 +44,7 @@ function isNavActive(
 export function Sidebar({ className }: { className?: string }) {
   const pathname = usePathname();
   const { user } = useAuth();
+  const { translate } = useLocale();
 
   return (
     <aside
@@ -57,10 +60,10 @@ export function Sidebar({ className }: { className?: string }) {
           </div>
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold leading-tight tracking-tight">
-              Clinic Queue
+              {translate("brandName")}
             </p>
             <p className="truncate text-xs text-sidebar-foreground/70">
-              Healthcare operations
+              {translate("brandTagline")}
             </p>
           </div>
         </Link>
@@ -75,12 +78,12 @@ export function Sidebar({ className }: { className?: string }) {
           );
           if (links.length === 0) return null;
           return (
-            <div key={group.label} className="space-y-1">
+            <div key={group.id} className="space-y-1">
               <p className="px-3 text-[0.65rem] font-semibold uppercase tracking-widest text-sidebar-foreground/50">
-                {group.label}
+                {translate(navGroupLabelKey(group.id))}
               </p>
               <ul className="space-y-0.5">
-                {links.map(({ href, label, feature, exact }) => {
+                {links.map(({ href, feature, exact }) => {
                   const Icon = navIcons[feature];
                   const active = isNavActive(pathname, href, exact);
                   return (
@@ -106,7 +109,7 @@ export function Sidebar({ className }: { className?: string }) {
                             active ? "text-sidebar-primary" : "opacity-80",
                           )}
                         />
-                        {label}
+                        {translate(navLabelKey(href))}
                       </Link>
                     </li>
                   );
@@ -119,7 +122,9 @@ export function Sidebar({ className }: { className?: string }) {
 
       <div className="border-t border-sidebar-border p-4">
         <div className="rounded-lg bg-sidebar-accent/50 px-3 py-3">
-          <p className="truncate text-sm font-medium">{user?.name ?? "Staff"}</p>
+          <p className="truncate text-sm font-medium">
+            {user?.name ?? translate("staffFallback")}
+          </p>
           <p className="truncate text-xs capitalize text-sidebar-foreground/60">
             {user?.role?.replace("_", " ") ?? "—"}
           </p>

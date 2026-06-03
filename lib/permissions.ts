@@ -48,6 +48,7 @@ const ROUTE_FEATURES: { prefix: string; feature: AppFeature }[] = [
   { prefix: "/dashboard/appointments/book", feature: "appointmentsBook" },
   { prefix: "/dashboard/appointments", feature: "appointments" },
   { prefix: "/dashboard/patients", feature: "patients" },
+  { prefix: "/dashboard/today", feature: "queue" },
   { prefix: "/dashboard/queue", feature: "queue" },
   { prefix: "/dashboard", feature: "overview" },
 ];
@@ -60,6 +61,7 @@ export const NAV_LINKS: {
 }[] = [
   { href: "/dashboard", label: "Overview", feature: "overview", exact: true },
   { href: "/dashboard/patients", label: "Patients", feature: "patients" },
+  { href: "/dashboard/today", label: "Today", feature: "queue" },
   { href: "/dashboard/queue", label: "Queue Management", feature: "queue" },
   {
     href: "/dashboard/appointments",
@@ -89,14 +91,14 @@ export const NAV_LINKS: {
   },
 ];
 
-export const NAV_GROUPS: { label: string; features: AppFeature[] }[] = [
-  { label: "Overview", features: ["overview"] },
+export const NAV_GROUPS: { id: string; features: AppFeature[] }[] = [
+  { id: "overview", features: ["overview"] },
   {
-    label: "Operations",
+    id: "operations",
     features: ["patients", "queue", "appointments", "appointmentsBook"],
   },
   {
-    label: "Administration",
+    id: "administration",
     features: ["administration", "billing", "paymentsAdmin", "platformUsers"],
   },
 ];
@@ -129,7 +131,7 @@ export function canAccessPath(
 export function getDefaultHomePath(role: UserRole): string {
   switch (role) {
     case "receptionist":
-      return "/dashboard/patients";
+      return "/dashboard/today";
     case "platform_admin":
       return "/dashboard/admin";
     default:

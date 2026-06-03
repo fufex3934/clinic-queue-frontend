@@ -1,4 +1,7 @@
+"use client";
+
 import { Ticket, User } from "lucide-react";
+import { useLocale } from "@/contexts/locale-provider";
 import { getPatientName, getPatientPhone } from "@/lib/patient";
 import { cn } from "@/lib/utils";
 import type { QueueEntry } from "@/types";
@@ -10,6 +13,7 @@ interface CurrentTokenCardProps {
 }
 
 export function CurrentTokenCard({ serving, loading }: CurrentTokenCardProps) {
+  const { translate } = useLocale();
   const isActive = Boolean(serving) && !loading;
 
   return (
@@ -20,7 +24,7 @@ export function CurrentTokenCard({ serving, loading }: CurrentTokenCardProps) {
       )}
       aria-live="polite"
       aria-busy={loading}
-      aria-label="Now serving"
+      aria-label={translate("nowServingAria")}
     >
       {isActive && (
         <div className="flex items-center justify-center gap-2 border-b border-subtle bg-primary/10 px-4 py-2.5 text-xs font-bold uppercase tracking-[0.2em] text-primary">
@@ -28,7 +32,7 @@ export function CurrentTokenCard({ serving, loading }: CurrentTokenCardProps) {
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-primary opacity-60" />
             <span className="relative inline-flex size-2.5 rounded-full bg-primary" />
           </span>
-          Now serving
+          {translate("nowServing")}
         </div>
       )}
 
@@ -41,7 +45,7 @@ export function CurrentTokenCard({ serving, loading }: CurrentTokenCardProps) {
         <div className="space-y-3">
           <p className="flex items-center gap-2 text-sm font-medium uppercase tracking-wide text-muted-foreground">
             <Ticket className="size-4" aria-hidden />
-            Current token
+            {translate("currentToken")}
           </p>
           <p
             className={cn(
@@ -75,9 +79,11 @@ export function CurrentTokenCard({ serving, loading }: CurrentTokenCardProps) {
             </div>
           ) : (
             <p className="text-sm text-muted-foreground md:text-base">
-              No patient is being served. Press{" "}
-              <span className="font-semibold text-foreground">Serve Next</span> when
-              the room is ready.
+              {translate("noPatientServing")}{" "}
+              <span className="font-semibold text-foreground">
+                {translate("serveNext")}
+              </span>{" "}
+              {translate("noPatientServingHint")}
             </p>
           )}
         </div>

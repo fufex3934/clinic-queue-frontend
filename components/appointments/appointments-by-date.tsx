@@ -25,6 +25,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorAlert } from "@/components/shared/error-alert";
 import { formatDisplayDate, todayDateString } from "@/lib/date";
 import { useConfirm } from "@/contexts/confirm-dialog-provider";
+import { useLocale } from "@/contexts/locale-provider";
+import { APPOINTMENT_STATUS_MESSAGE_KEYS } from "@/lib/i18n/queue-status";
 import { getErrorMessage } from "@/lib/errors";
 import { notifyError, notifySuccess } from "@/lib/toast";
 import { getPatientName, getPatientPhone } from "@/lib/patient";
@@ -50,8 +52,18 @@ import {
 } from "./appointment-status-badge";
 import { AppointmentsLoadingSkeleton } from "./appointments-loading-skeleton";
 
+const STATUS_FILTER_OPTIONS = [
+  "scheduled",
+  "confirmed",
+  "arrived",
+  "completed",
+  "cancelled",
+  "no_show",
+] as const;
+
 export function AppointmentsByDate() {
   const confirm = useConfirm();
+  const { translate } = useLocale();
   const { user } = useAuth();
   const { scope, scopeKey, isScopeReady, operationalClinicId } =
     useOperationalScope();
@@ -160,15 +172,13 @@ export function AppointmentsByDate() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <CalendarDays className="size-4" />
-            Select date
+            {translate("aptSelectDate")}
           </CardTitle>
-          <CardDescription>
-            View booked visits for any day — capacity follows your clinic settings
-          </CardDescription>
+          <CardDescription>{translate("aptSelectDateDesc")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap items-end gap-4">
           <div className="space-y-2">
-            <Label htmlFor="appointment-date">Date</Label>
+            <Label htmlFor="appointment-date">{translate("aptDate")}</Label>
             <Input
               id="appointment-date"
               type="date"
@@ -184,7 +194,7 @@ export function AppointmentsByDate() {
               size="sm"
               render={<Link href="/dashboard/appointments/book" />}
             >
-              Book new
+              {translate("aptBookNew")}
             </Button>
           )}
           <Button
@@ -195,17 +205,17 @@ export function AppointmentsByDate() {
             <RefreshCw
               className={`mr-2 size-4 ${loading ? "animate-spin" : ""}`}
             />
-            Refresh
+            {translate("refresh")}
           </Button>
           <p className="text-sm text-muted-foreground">
-            {loading ? "Loading…" : formatDisplayDate(date)}
+            {loading ? translate("loading") : formatDisplayDate(date)}
           </p>
         </CardContent>
       </Card>
 
       {error && (
         <ErrorAlert
-          title="Could not load schedule"
+          title={translate("aptLoadError")}
           message={error}
           onRetry={() => loadAppointments(date)}
         />
@@ -216,18 +226,18 @@ export function AppointmentsByDate() {
           <CardContent className="flex flex-wrap items-end gap-3 pt-6">
             <div className="min-w-[12rem] flex-1 space-y-1">
               <Label htmlFor="apt-filter" className="text-xs text-muted-foreground">
-                Filter this day
+                {translate("aptFilterDay")}
               </Label>
               <Input
                 id="apt-filter"
-                placeholder="Patient name, phone, or time slot…"
+                placeholder={translate("aptFilterPlaceholder")}
                 value={filterText}
                 onChange={(e) => setFilterText(e.target.value)}
               />
             </div>
             <div className="space-y-1">
               <Label htmlFor="apt-status" className="text-xs text-muted-foreground">
-                Status
+                {translate("status")}
               </Label>
               <select
                 id="apt-status"
@@ -235,17 +245,19 @@ export function AppointmentsByDate() {
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
               >
-                <option value="">All statuses</option>
-                <option value="scheduled">Scheduled</option>
-                <option value="confirmed">Confirmed</option>
-                <option value="arrived">Arrived</option>
-                <option value="completed">Completed</option>
-                <option value="cancelled">Cancelled</option>
-                <option value="no_show">No-show</option>
+                <option value="">{translate("allStatuses")}</option>
+                {STATUS_FILTER_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {translate(APPOINTMENT_STATUS_MESSAGE_KEYS[s])}
+                  </option>
+                ))}
               </select>
             </div>
             <p className="text-sm text-muted-foreground">
-              {filteredAppointments.length} of {appointments.length} on this day
+              {translate("aptCountShown", {
+                shown: filteredAppointments.length,
+                total: appointments.length,
+              })}
             </p>
           </CardContent>
         </Card>
@@ -256,25 +268,29 @@ export function AppointmentsByDate() {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Schedule</CardTitle>
+            <CardTitle className="text-base">{translate("aptSchedule")}</CardTitle>
             <CardDescription>
-              {appointments.length} appointment
-              {appointments.length === 1 ? "" : "s"} on this date
+              {translate(
+                appointments.length === 1
+                  ? "aptScheduleCountOne"
+                  : "aptScheduleCount",
+                { count: appointments.length },
+              )}
             </CardDescription>
           </CardHeader>
           <CardContent>
             {appointments.length === 0 && !error ? (
               <EmptyState
                 icon={CalendarX2}
-                title="No appointments scheduled"
-                description="There are no bookings for this date. Try another day or add appointments through the API when booking is enabled in the UI."
+                title={translate("aptNoScheduled")}
+                description={translate("aptNoScheduledDesc")}
                 action={
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={() => setDate(todayDateString())}
                   >
-                    Jump to today
+                    {translate("jumpToToday")}
                   </Button>
                 }
               />
@@ -295,16 +311,23 @@ export function AppointmentsByDate() {
                               : "text-xs font-normal text-muted-foreground"
                           }
                         >
-                          {count}/{maxAppointmentsPerSlot} booked
+                          {translate("aptBookedCount", {
+                            count,
+                            max: maxAppointmentsPerSlot,
+                          })}
                         </span>
                       </h3>
                       <Table className="table-zebra">
                         <TableHeader>
                           <TableRow>
-                            <TableHead>Patient</TableHead>
-                            <TableHead className="hidden sm:table-cell">Phone</TableHead>
-                            <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            <TableHead>{translate("patient")}</TableHead>
+                            <TableHead className="hidden sm:table-cell">
+                              {translate("phone")}
+                            </TableHead>
+                            <TableHead>{translate("status")}</TableHead>
+                            <TableHead className="text-right">
+                              {translate("actions")}
+                            </TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>

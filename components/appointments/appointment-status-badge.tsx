@@ -1,3 +1,7 @@
+"use client";
+
+import { useLocale } from "@/contexts/locale-provider";
+import { APPOINTMENT_STATUS_MESSAGE_KEYS } from "@/lib/i18n/queue-status";
 import { cn } from "@/lib/utils";
 import { APPOINTMENT_STATUS_STYLES } from "@/lib/status-theme";
 import type { AppointmentStatus } from "@/types";
@@ -9,6 +13,7 @@ export function AppointmentStatusBadge({
   status: AppointmentStatus;
   className?: string;
 }) {
+  const { translate } = useLocale();
   const styles = APPOINTMENT_STATUS_STYLES[status];
   return (
     <span
@@ -18,7 +23,7 @@ export function AppointmentStatusBadge({
         className,
       )}
     >
-      {styles.label}
+      {translate(APPOINTMENT_STATUS_MESSAGE_KEYS[status])}
     </span>
   );
 }
