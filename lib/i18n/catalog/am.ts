@@ -182,4 +182,28 @@ export const am: Record<MessageKey, string> = {
   aptNoScheduled: "ቀጠሮ አልተዘጋጁም",
   aptNoScheduledDesc: "ለዚህ ቀን ቀጠሮ የለም። ሌላ ቀን ይሞክሩ ወይም አዲስ ቀጠሮ ይመዝገቡ።",
   aptBookedCount: "{count}/{max} ተይዟል",
+
+  billingTitle: "ክፍያ",
+  billingSubtitle:
+    "በቴሌብር ወይም ባንክ ይክፈሉ፣ ከዚያ ጥያቄዎን እና ደረሰኝ ይላኩ",
+  billingPayTitle: "የደንበኝነት ክፍያ",
+  billingPayDesc: "መጀመሻ ክፍያ ያድርጉ፣ ከዚያ ጥያቄዎን ይቀጥሉ",
+  billingCurrentPlan: "የአሁኑ እቅድ",
+  billingRequestRenewal: "እንደገና ይጠይቁ",
+  billingPerMonth: "/ ወር",
+  billingGuidePrice: "መመሪያ ዋጋ",
+
+  bookAppointmentTitle: "ቀጠሮ ይመዝገቡ",
+  bookAppointmentDesc:
+    "ጉዞ ያስይዙ። በአንድ ሰዓት ከፍተኛ {max} ታካሚዎች በቀን።",
+  bookSelectPatient: "ታካሚ",
+  bookSelectDate: "ቀን",
+  bookSelectTime: "ሰዓት",
+  bookSubmit: "ቀጠሮ ይመዝገቡ",
+  bookSubmitting: "በመመዝገብ…",
+  slotFull: "ሙሉ",
+  toastBookedTitle: "ቀጠሮ ተመዘገበ",
+  toastBookedDesc: "ጉዞ ለ {date} በ {time} ተይዟል።",
+  toastBookFailed: "ቀጠሮ ማስመዝገብ አልተሳካም",
+  toastValidationTitle: "ግቤቶን ያረጋግጡ",
 };

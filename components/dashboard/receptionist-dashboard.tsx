@@ -23,7 +23,7 @@ import { CurrentTokenCard } from "@/components/queue/current-token-card";
 import { WaitingList } from "@/components/queue/waiting-list";
 import { getErrorMessage } from "@/lib/errors";
 import { getPatientName } from "@/lib/patient";
-import { todayDateString } from "@/lib/date";
+import { useClinicToday } from "@/hooks/use-clinic-today";
 import { useRealtimeQueue } from "@/hooks/use-realtime-queue";
 import { useOperationalScope } from "@/hooks/use-operational-scope";
 import { appointmentService } from "@/services/appointmentService";
@@ -34,6 +34,7 @@ import type { QueueEntry } from "@/types";
 import { isClinicDashboardStats } from "@/types/stats";
 
 export function ReceptionistDashboard() {
+  const clinicToday = useClinicToday();
   const { scope, scopeKey, operationalClinicId, isScopeReady } =
     useOperationalScope();
   const [queue, setQueue] = useState<QueueEntry[]>([]);
@@ -61,14 +62,13 @@ export function ReceptionistDashboard() {
         queueService.getToday(scope),
         statsService.getDashboard(),
         patientService.list({ ...scope, limit: 100, page: 1 }),
-        appointmentService.getByDate(todayDateString(), scope),
+        appointmentService.getByDate(clinicToday, scope),
       ]);
 
       setQueue(queueRes.data);
 
-      const today = todayDateString();
       const patientsToday = patientsRes.data.items.filter((p) =>
-        p.createdAt?.startsWith(today),
+        p.createdAt?.startsWith(clinicToday),
       ).length;
 
       if (isClinicDashboardStats(statsRes.data)) {
@@ -108,7 +108,7 @@ export function ReceptionistDashboard() {
     } catch {
       /* silent refresh */
     }
-  }, [scope, scopeKey, isScopeReady]);
+  }, [scope, scopeKey, isScopeReady, clinicToday]);
 
   useEffect(() => {
     void load();

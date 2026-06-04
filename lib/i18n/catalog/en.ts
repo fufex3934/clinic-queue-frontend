@@ -189,6 +189,30 @@ export const en = {
   aptNoScheduledDesc:
     "There are no bookings for this date. Try another day or book a new appointment.",
   aptBookedCount: "{count}/{max} booked",
+
+  billingTitle: "Billing",
+  billingSubtitle:
+    "Pay with Telebirr or bank transfer, then submit your request and upload proof",
+  billingPayTitle: "Pay subscription",
+  billingPayDesc: "Complete payment first, then continue with your request below",
+  billingCurrentPlan: "Current plan",
+  billingRequestRenewal: "Request renewal",
+  billingPerMonth: "/ month",
+  billingGuidePrice: "guide price",
+
+  bookAppointmentTitle: "Book appointment",
+  bookAppointmentDesc:
+    "Schedule a visit. Max {max} patients per slot per day.",
+  bookSelectPatient: "Patient",
+  bookSelectDate: "Date",
+  bookSelectTime: "Time slot",
+  bookSubmit: "Book appointment",
+  bookSubmitting: "Booking…",
+  slotFull: "FULL",
+  toastBookedTitle: "Appointment booked",
+  toastBookedDesc: "Visit scheduled for {date} at {time}.",
+  toastBookFailed: "Could not book appointment",
+  toastValidationTitle: "Please check your input",
 } as const;
 
 export type MessageKey = keyof typeof en;

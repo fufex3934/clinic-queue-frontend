@@ -145,7 +145,7 @@ export function DashboardAnalytics() {
             Your clinic today
           </h2>
           <p className="text-sm text-muted-foreground">
-            Single-clinic metrics for {today} (UTC) · updated{" "}
+            Single-clinic metrics for {today} ({stats.timezone}) · updated{" "}
             {new Date(stats.generatedAt).toLocaleTimeString()}
           </p>
         </div>

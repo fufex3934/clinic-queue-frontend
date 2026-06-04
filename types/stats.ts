@@ -48,6 +48,7 @@ export interface ClinicDashboardStats {
   clinicId: string;
   generatedAt: string;
   today: string;
+  timezone: string;
   kpis: ClinicDashboardKpis;
   queueLast7Days: QueueDaySeriesPoint[];
   appointmentsLast7Days: AppointmentDaySeriesPoint[];

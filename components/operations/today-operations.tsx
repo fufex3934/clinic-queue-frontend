@@ -25,7 +25,7 @@ import { useLocale } from "@/contexts/locale-provider";
 import { useRealtimeAppointments } from "@/hooks/use-realtime-appointments";
 import { useRealtimeQueue } from "@/hooks/use-realtime-queue";
 import { useOperationalScope } from "@/hooks/use-operational-scope";
-import { todayDateString } from "@/lib/date";
+import { useClinicToday } from "@/hooks/use-clinic-today";
 import { getErrorMessage } from "@/lib/errors";
 import { getPatientName } from "@/lib/patient";
 import { cn } from "@/lib/utils";
@@ -35,6 +35,7 @@ import type { Appointment, QueueEntry } from "@/types";
 
 export function TodayOperations() {
   const { translate } = useLocale();
+  const clinicToday = useClinicToday();
   const {
     scope,
     scopeKey,
@@ -55,9 +56,8 @@ export function TodayOperations() {
     setError(null);
     setLoading(true);
     try {
-      const today = todayDateString();
       const [apptRes, queueRes] = await Promise.all([
-        appointmentService.getByDate(today, scope),
+        appointmentService.getByDate(clinicToday, scope),
         queueService.getToday(scope),
       ]);
       setAppointments(apptRes.data);
@@ -67,7 +67,7 @@ export function TodayOperations() {
     } finally {
       setLoading(false);
     }
-  }, [scope, scopeKey, isScopeReady]);
+  }, [scope, scopeKey, isScopeReady, clinicToday]);
 
   useEffect(() => {
     void load();
@@ -87,14 +87,14 @@ export function TodayOperations() {
     if (!isScopeReady) return;
     try {
       const { data } = await appointmentService.getByDate(
-        todayDateString(),
+        clinicToday,
         scope,
       );
       setAppointments(data);
     } catch {
       /* silent */
     }
-  }, [scope, scopeKey, isScopeReady]);
+  }, [scope, scopeKey, isScopeReady, clinicToday]);
 
   useRealtimeQueue(operationalClinicId, refreshQueue, isScopeReady);
   useRealtimeAppointments(operationalClinicId, refreshAppointments, isScopeReady);

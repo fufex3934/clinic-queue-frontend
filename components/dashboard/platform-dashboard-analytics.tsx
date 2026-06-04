@@ -151,7 +151,7 @@ export function PlatformDashboardAnalytics() {
           </h2>
           <p className="text-sm text-muted-foreground">
             Aggregated across {kpis.clinicsTotal} clinic
-            {kpis.clinicsTotal === 1 ? "" : "s"} · {today} (UTC) · updated{" "}
+            {kpis.clinicsTotal === 1 ? "" : "s"} · {today} (Addis Ababa) · updated{" "}
             {new Date(stats.generatedAt).toLocaleTimeString()}
           </p>
         </div>

@@ -185,4 +185,28 @@ export const om: Record<MessageKey, string> = {
   aptNoScheduledDesc:
     "Guyyaa kanaaf beellama hin jiru. Guyyaan biraa yookiin haaraa qabsiisi.",
   aptBookedCount: "{count}/{max} qabsiifame",
+
+  billingTitle: "Kaffaltii",
+  billingSubtitle:
+    "Telebirr yookiin baankii kaffali, achiin gaaffii fi ragaa olkaa'i",
+  billingPayTitle: "Kaffaltii galmee",
+  billingPayDesc: "Dursa kaffali, achiin gaaffii kee itti fufi",
+  billingCurrentPlan: "Karoora ammaa",
+  billingRequestRenewal: "Haaromsa gaafadhu",
+  billingPerMonth: "/ ji'a",
+  billingGuidePrice: "gatii qajeelcha",
+
+  bookAppointmentTitle: "Beellama qabsiisi",
+  bookAppointmentDesc:
+    "Daawwannoo qabsiisi. Sa'aatii tokkotti hanga {max} dhukkubsataa/guyyaa.",
+  bookSelectPatient: "Dhukkubsataa",
+  bookSelectDate: "Guyyaa",
+  bookSelectTime: "Sa'aatii",
+  bookSubmit: "Beellama qabsiisi",
+  bookSubmitting: "Qabsiisaa jira…",
+  slotFull: "GUUTUU",
+  toastBookedTitle: "Beellamni qabsiifame",
+  toastBookedDesc: "Daawwannoon {date} sa'aatii {time} qabsiifame.",
+  toastBookFailed: "Beellama qabsiisuu hin dandeenye",
+  toastValidationTitle: "Galchita kee mirkaneessi",
 };

@@ -18,28 +18,36 @@ import {
   getClinicSettings,
   getTimeSlotsForClinic,
 } from "@/lib/clinic-settings";
-import { todayDateString } from "@/lib/date";
+import { useClinicToday } from "@/hooks/use-clinic-today";
 import { getErrorMessage } from "@/lib/errors";
-import { notifyError, notifySuccess } from "@/lib/toast";
+import { useNotify } from "@/hooks/use-notify";
 import { PlatformClinicSelector } from "@/components/admin/platform-clinic-selector";
+import { useLocale } from "@/contexts/locale-provider";
 import { useOperationalScope } from "@/hooks/use-operational-scope";
 import { appointmentService } from "@/services/appointmentService";
 import { patientService } from "@/services/patientService";
 import type { Appointment, Patient } from "@/types";
 
 export function BookAppointmentForm() {
+  const { translate } = useLocale();
+  const notify = useNotify();
   const { scope, scopeKey, isScopeReady } = useOperationalScope();
   const { activeClinic } = useClinicContext();
   const { maxAppointmentsPerSlot } = getClinicSettings(activeClinic);
   const timeSlots = getTimeSlotsForClinic(activeClinic);
+  const clinicToday = useClinicToday();
   const [patients, setPatients] = useState<Patient[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [patientId, setPatientId] = useState("");
-  const [date, setDate] = useState(todayDateString());
+  const [date, setDate] = useState(clinicToday);
   const [timeSlot, setTimeSlot] = useState(timeSlots[0] ?? "09:00");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  useEffect(() => {
+    setDate(clinicToday);
+  }, [clinicToday, scopeKey]);
 
   const loadPatients = useCallback(async () => {
     if (!isScopeReady) return;
@@ -99,13 +107,13 @@ export function BookAppointmentForm() {
       await appointmentService.book({ patientId, date, timeSlot }, scope);
       setSuccess(`Booked ${timeSlot} on ${date}`);
       await loadAppointments(date);
-      notifySuccess(
-        "Appointment booked",
-        `Visit scheduled for ${date} at ${timeSlot}.`,
-      );
+      notify.success("toastBookedTitle", "toastBookedDesc", {
+        date,
+        time: timeSlot,
+      });
     } catch (err: unknown) {
       setError(getErrorMessage(err, "Failed to book appointment"));
-      notifyError(err, "Could not book appointment");
+      notify.error(err, "toastBookFailed");
     } finally {
       setLoading(false);
     }
@@ -118,10 +126,12 @@ export function BookAppointmentForm() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CalendarPlus className="size-5" />
-            Book appointment
+            {translate("bookAppointmentTitle")}
           </CardTitle>
           <CardDescription>
-            Max {maxAppointmentsPerSlot} patients per slot per day
+            {translate("bookAppointmentDesc", {
+              max: maxAppointmentsPerSlot,
+            })}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -133,7 +143,7 @@ export function BookAppointmentForm() {
               disabled={loading}
             />
             <div className="space-y-2">
-              <Label htmlFor="book-date">Date</Label>
+              <Label htmlFor="book-date">{translate("bookSelectDate")}</Label>
               <Input
                 id="book-date"
                 type="date"
@@ -143,7 +153,7 @@ export function BookAppointmentForm() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="book-slot">Time slot</Label>
+              <Label htmlFor="book-slot">{translate("bookSelectTime")}</Label>
               <select
                 id="book-slot"
                 className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm"
@@ -156,7 +166,7 @@ export function BookAppointmentForm() {
                   return (
                     <option key={slot} value={slot} disabled={full}>
                       {slot} ({count}/{maxAppointmentsPerSlot})
-                      {full ? " — FULL" : ""}
+                      {full ? ` — ${translate("slotFull")}` : ""}
                     </option>
                   );
                 })}
@@ -173,7 +183,7 @@ export function BookAppointmentForm() {
               </p>
             )}
             <Button type="submit" className="w-full" disabled={loading || !patientId}>
-              {loading ? "Booking…" : "Book appointment"}
+              {loading ? translate("bookSubmitting") : translate("bookSubmit")}
             </Button>
           </form>
         </CardContent>

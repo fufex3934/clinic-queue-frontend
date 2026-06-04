@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/table";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ErrorAlert } from "@/components/shared/error-alert";
-import { formatDisplayDate, todayDateString } from "@/lib/date";
+import { useClinicToday, useFormatClinicDate } from "@/hooks/use-clinic-today";
 import { useConfirm } from "@/contexts/confirm-dialog-provider";
 import { useLocale } from "@/contexts/locale-provider";
 import { APPOINTMENT_STATUS_MESSAGE_KEYS } from "@/lib/i18n/queue-status";
@@ -64,13 +64,19 @@ const STATUS_FILTER_OPTIONS = [
 export function AppointmentsByDate() {
   const confirm = useConfirm();
   const { translate } = useLocale();
+  const clinicToday = useClinicToday();
+  const formatDisplayDate = useFormatClinicDate();
   const { user } = useAuth();
   const { scope, scopeKey, isScopeReady, operationalClinicId } =
     useOperationalScope();
   const { activeClinic } = useClinicContext();
   const { maxAppointmentsPerSlot } = getClinicSettings(activeClinic);
   const canBook = canAccessFeature(user?.role, "appointmentsBook");
-  const [date, setDate] = useState(todayDateString());
+  const [date, setDate] = useState(clinicToday);
+
+  useEffect(() => {
+    setDate(clinicToday);
+  }, [clinicToday, scopeKey]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -162,7 +168,7 @@ export function AppointmentsByDate() {
   }, {});
 
   const slots = Object.keys(bySlot).sort();
-  const isToday = date === todayDateString();
+  const isToday = date === clinicToday;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -288,7 +294,7 @@ export function AppointmentsByDate() {
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setDate(todayDateString())}
+                    onClick={() => setDate(clinicToday)}
                   >
                     {translate("jumpToToday")}
                   </Button>

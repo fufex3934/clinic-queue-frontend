@@ -17,9 +17,10 @@ import { Label } from "@/components/ui/label";
 import { ErrorAlert } from "@/components/shared/error-alert";
 import { getErrorMessage } from "@/lib/errors";
 import { ListDataToolbar } from "@/components/shared/list-data-toolbar";
+import { useLocale } from "@/contexts/locale-provider";
 import {
   formatDualCurrency,
-  formatPlanPriceEtb,
+  formatPlanPricePrimary,
   PLAN_USD,
   TELEBIRR_PAYMENT_HINT,
 } from "@/lib/billing-local";
@@ -43,6 +44,7 @@ const PLANS: { id: SubscriptionPlan; label: string; price: number }[] = [
 ];
 
 export function BillingPage() {
+  const { translate } = useLocale();
   const [billing, setBilling] = useState<BillingSummary | null>(null);
   const [paymentConfig, setPaymentConfig] =
     useState<PlatformPaymentConfig | null>(null);
@@ -165,10 +167,11 @@ export function BillingPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <header className="space-y-1 text-center sm:text-left">
-        <h1 className="text-2xl font-semibold tracking-tight">Billing</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {translate("billingTitle")}
+        </h1>
         <p className="text-sm text-muted-foreground">
-          {TELEBIRR_PAYMENT_HINT} Scan the QR, then submit your request and upload
-          proof.
+          {translate("billingSubtitle")} {TELEBIRR_PAYMENT_HINT}
         </p>
       </header>
 
@@ -195,10 +198,8 @@ export function BillingPage() {
       {hasPaySection && paymentConfig && (
         <Card className="overflow-hidden border-primary/25 shadow-md">
           <CardHeader className="border-b border-border/60 bg-muted/30 pb-4 text-center sm:text-left">
-            <CardTitle className="text-lg">Pay subscription</CardTitle>
-            <CardDescription>
-              Complete payment first, then continue with your request below
-            </CardDescription>
+            <CardTitle className="text-lg">{translate("billingPayTitle")}</CardTitle>
+            <CardDescription>{translate("billingPayDesc")}</CardDescription>
           </CardHeader>
           <CardContent className="px-4 py-6 sm:px-8 sm:py-8">
             {hasQr && paymentConfig.paymentQrImageUrl && (
@@ -330,8 +331,8 @@ export function BillingPage() {
             >
               {PLANS.map((p) => (
                 <option key={p.id} value={p.id}>
-                  {p.label} — {formatDualCurrency(p.price)} / month (
-                  {formatPlanPriceEtb(p.id)} guide)
+                  {p.label} — {formatPlanPricePrimary(p.price)}
+                  {translate("billingPerMonth")} ({translate("billingGuidePrice")})
                 </option>
               ))}
             </select>
