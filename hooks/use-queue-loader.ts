@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getErrorMessage } from "@/lib/errors";
+import { queueEntriesEqual } from "@/lib/queue-entries";
 import { queueService } from "@/services/queueService";
 import type { QueueEntry } from "@/types";
 
@@ -26,7 +27,7 @@ export function useQueueLoader(
       setError(null);
       try {
         const { data } = await queueService.getToday(scope);
-        setEntries(data);
+        setEntries((prev) => (queueEntriesEqual(prev, data) ? prev : data));
       } catch (err: unknown) {
         setError(getErrorMessage(err, "Failed to load today's queue"));
       } finally {

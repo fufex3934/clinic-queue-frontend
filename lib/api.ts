@@ -5,7 +5,8 @@ import { getStoredAccessToken } from "@/lib/auth/token-storage";
 export interface ApiErrorBody {
   statusCode: number;
   message: string;
-  error: string;
+  error?: string;
+  retryAfter?: number;
   timestamp?: string;
   path?: string;
 }

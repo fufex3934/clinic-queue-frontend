@@ -17,6 +17,7 @@ import { formatEthiopianPhone } from "@/lib/phone";
 import { getPatientName, getPatientPhone } from "@/lib/patient";
 import { cn } from "@/lib/utils";
 import type { QueueEntry } from "@/types";
+import { RealtimeQueueStatus } from "./realtime-queue-status";
 
 function DisplayClock() {
   const [now, setNow] = useState(() => new Date());
@@ -58,7 +59,11 @@ export function QueueDisplayBoard() {
     void loadQueue({ silent: true });
   }, [loadQueue]);
 
-  useRealtimeQueue(operationalClinicId, refreshQueue, isScopeReady);
+  const { isConnected, isPolling } = useRealtimeQueue(
+    operationalClinicId,
+    refreshQueue,
+    isScopeReady,
+  );
 
   const { serving, nextWaiting, waiting } = useMemo(() => {
     const byStatus: Record<string, QueueEntry[]> = {
@@ -115,6 +120,10 @@ export function QueueDisplayBoard() {
           <PlatformClinicSelector />
         </div>
       )}
+
+      <div className="px-4 pt-3 md:px-8">
+        <RealtimeQueueStatus isConnected={isConnected} isPolling={isPolling} />
+      </div>
 
       {error && (
         <div className="px-4 py-4 md:px-8">

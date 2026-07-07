@@ -12,6 +12,7 @@ import {
 import { PlatformClinicSelector } from "@/components/admin/platform-clinic-selector";
 import { AppointmentStatusBadge } from "@/components/appointments/appointment-status-badge";
 import { CurrentTokenCard } from "@/components/queue/current-token-card";
+import { RealtimeQueueStatus } from "@/components/queue/realtime-queue-status";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -96,7 +97,11 @@ export function TodayOperations() {
     }
   }, [scope, scopeKey, isScopeReady, clinicToday]);
 
-  useRealtimeQueue(operationalClinicId, refreshQueue, isScopeReady);
+  const { isConnected, isPolling } = useRealtimeQueue(
+    operationalClinicId,
+    refreshQueue,
+    isScopeReady,
+  );
   useRealtimeAppointments(operationalClinicId, refreshAppointments, isScopeReady);
 
   const serving = useMemo(
@@ -130,6 +135,7 @@ export function TodayOperations() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PlatformClinicSelector />
+      <RealtimeQueueStatus isConnected={isConnected} isPolling={isPolling} />
 
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>

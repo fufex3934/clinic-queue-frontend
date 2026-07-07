@@ -20,8 +20,10 @@ import {
 } from "@/components/ui/card";
 import { ErrorAlert } from "@/components/shared/error-alert";
 import { CurrentTokenCard } from "@/components/queue/current-token-card";
+import { RealtimeQueueStatus } from "@/components/queue/realtime-queue-status";
 import { WaitingList } from "@/components/queue/waiting-list";
 import { getErrorMessage } from "@/lib/errors";
+import { queueEntriesEqual } from "@/lib/queue-entries";
 import { getPatientName } from "@/lib/patient";
 import { useClinicToday } from "@/hooks/use-clinic-today";
 import { useRealtimeQueue } from "@/hooks/use-realtime-queue";
@@ -99,12 +101,15 @@ export function ReceptionistDashboard() {
     if (!isScopeReady) return;
     try {
       const { data } = await queueService.getToday(scope);
-      setQueue(data);
-      setKpis((prev) => ({
-        ...prev,
-        waiting: data.filter((q) => q.status === "waiting").length,
-        servedToday: data.filter((q) => q.status === "done").length,
-      }));
+      setQueue((prev) => (queueEntriesEqual(prev, data) ? prev : data));
+      setKpis((prev) => {
+        const waiting = data.filter((q) => q.status === "waiting").length;
+        const servedToday = data.filter((q) => q.status === "done").length;
+        if (prev.waiting === waiting && prev.servedToday === servedToday) {
+          return prev;
+        }
+        return { ...prev, waiting, servedToday };
+      });
     } catch {
       /* silent refresh */
     }
@@ -114,7 +119,11 @@ export function ReceptionistDashboard() {
     void load();
   }, [load, isScopeReady]);
 
-  useRealtimeQueue(operationalClinicId, refreshQueueOnly, isScopeReady);
+  const { isConnected, isPolling } = useRealtimeQueue(
+    operationalClinicId,
+    refreshQueueOnly,
+    isScopeReady,
+  );
 
   const serving = useMemo(
     () => queue.find((e) => e.status === "serving") ?? null,
@@ -143,6 +152,7 @@ export function ReceptionistDashboard() {
       {statsError && (
         <ErrorAlert title="Error" message={statsError} onRetry={load} />
       )}
+      <RealtimeQueueStatus isConnected={isConnected} isPolling={isPolling} />
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>

@@ -33,6 +33,7 @@ import { AddToQueueDialog } from "./add-to-queue-dialog";
 import { ServeNextDialog } from "./serve-next-dialog";
 import { QueueDraggableWaiting } from "./queue-draggable-waiting";
 import { QueueTabPanel } from "./queue-tab-panel";
+import { RealtimeQueueStatus } from "./realtime-queue-status";
 
 const TAB_LABEL_KEYS: Record<QueueStatus, MessageKey> = {
   waiting: "tabWaiting",
@@ -62,7 +63,11 @@ export function QueueManagement() {
     void loadQueue({ silent: true });
   }, [loadQueue]);
 
-  useRealtimeQueue(operationalClinicId, refreshQueue, isScopeReady);
+  const { isConnected, isPolling } = useRealtimeQueue(
+    operationalClinicId,
+    refreshQueue,
+    isScopeReady,
+  );
 
   const byStatus = useMemo(() => {
     const map: Record<QueueStatus, QueueEntry[]> = {
@@ -156,6 +161,7 @@ export function QueueManagement() {
   return (
     <div className="mx-auto max-w-6xl space-y-6">
       <PlatformClinicSelector />
+      <RealtimeQueueStatus isConnected={isConnected} isPolling={isPolling} />
 
       {isPlatformView && !isScopeReady && (
         <p className="text-sm text-muted-foreground">
